@@ -117,4 +117,15 @@ public interface AutoClickConfig extends Config
 	{
 		return false;
 	}
+
+	@ConfigItem(
+			keyName = "clickOnMenuEntryChanged",
+			name = "Click when menu entry changes",
+			description = "Clicks when the mouse-over action changes.",
+			position = 6
+	)
+	default boolean clickOnMenuEntryChanged()
+	{
+		return false;
+	}
 }
