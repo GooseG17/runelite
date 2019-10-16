@@ -27,9 +27,6 @@ package net.runelite.client.plugins.autoprayflick;
 
 import com.google.inject.Provides;
 import java.awt.Rectangle;
-import java.awt.AWTException;
-import java.awt.Robot;
-import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.util.Arrays;
@@ -43,7 +40,6 @@ import net.runelite.api.Client;
 import net.runelite.api.Point;
 import net.runelite.api.Prayer;
 import net.runelite.api.VarClientStr;
-import net.runelite.api.events.FocusChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetInfo;
@@ -286,7 +282,10 @@ public class AutoPrayFlickPlugin extends Plugin implements KeyListener, MouseLis
 		{
 			return false;
 		}
-		else return true;
+		else
+		{
+			return true;
+		}
 	}
 
 	private void mouseOverPrayer()
@@ -317,25 +316,25 @@ public class AutoPrayFlickPlugin extends Plugin implements KeyListener, MouseLis
 			double scale = 1 + (scalingFactor / 100);
 
 			MouseEvent mousePressed =
-					new MouseEvent(client.getCanvas(), 501, System.currentTimeMillis(), 0, (int) (client.getMouseCanvasPosition().getX() * scale), (int) (client.getMouseCanvasPosition().getY() * scale), 1, false, 1);
+				new MouseEvent(client.getCanvas(), 501, System.currentTimeMillis(), 0, (int) (client.getMouseCanvasPosition().getX() * scale), (int) (client.getMouseCanvasPosition().getY() * scale), 1, false, 1);
 			client.getCanvas().dispatchEvent(mousePressed);
 			MouseEvent mouseReleased =
-					new MouseEvent(client.getCanvas(), 502, System.currentTimeMillis(), 0, (int) (client.getMouseCanvasPosition().getX() * scale), (int) (client.getMouseCanvasPosition().getY() * scale), 1, false, 1);
+				new MouseEvent(client.getCanvas(), 502, System.currentTimeMillis(), 0, (int) (client.getMouseCanvasPosition().getX() * scale), (int) (client.getMouseCanvasPosition().getY() * scale), 1, false, 1);
 			client.getCanvas().dispatchEvent(mouseReleased);
 			MouseEvent mouseClicked =
-					new MouseEvent(client.getCanvas(), 500, System.currentTimeMillis(), 0, (int) (client.getMouseCanvasPosition().getX() * scale), (int) (client.getMouseCanvasPosition().getY() * scale), 1, false, 1);
+				new MouseEvent(client.getCanvas(), 500, System.currentTimeMillis(), 0, (int) (client.getMouseCanvasPosition().getX() * scale), (int) (client.getMouseCanvasPosition().getY() * scale), 1, false, 1);
 			client.getCanvas().dispatchEvent(mouseClicked);
 		}
 		if (!client.isStretchedEnabled())
 		{
 			MouseEvent mousePressed =
-					new MouseEvent(client.getCanvas(), 501, System.currentTimeMillis(), 0, client.getMouseCanvasPosition().getX(), client.getMouseCanvasPosition().getY(), 1, false, 1);
+				new MouseEvent(client.getCanvas(), 501, System.currentTimeMillis(), 0, client.getMouseCanvasPosition().getX(), client.getMouseCanvasPosition().getY(), 1, false, 1);
 			client.getCanvas().dispatchEvent(mousePressed);
 			MouseEvent mouseReleased =
-					new MouseEvent(client.getCanvas(), 502, System.currentTimeMillis(), 0, client.getMouseCanvasPosition().getX(), client.getMouseCanvasPosition().getY(), 1, false, 1);
+				new MouseEvent(client.getCanvas(), 502, System.currentTimeMillis(), 0, client.getMouseCanvasPosition().getX(), client.getMouseCanvasPosition().getY(), 1, false, 1);
 			client.getCanvas().dispatchEvent(mouseReleased);
 			MouseEvent mouseClicked =
-					new MouseEvent(client.getCanvas(), 500, System.currentTimeMillis(), 0, client.getMouseCanvasPosition().getX(), client.getMouseCanvasPosition().getY(), 1, false, 1);
+				new MouseEvent(client.getCanvas(), 500, System.currentTimeMillis(), 0, client.getMouseCanvasPosition().getX(), client.getMouseCanvasPosition().getY(), 1, false, 1);
 			client.getCanvas().dispatchEvent(mouseClicked);
 		}
 	}

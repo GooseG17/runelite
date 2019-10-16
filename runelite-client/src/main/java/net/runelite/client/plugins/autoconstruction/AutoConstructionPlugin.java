@@ -25,260 +25,316 @@
 package net.runelite.client.plugins.autoconstruction;
 
 import com.google.inject.Provides;
-
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
+import java.awt.geom.Point2D;
 import java.util.Random;
-import java.util.concurrent.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import javax.inject.Inject;
-import lombok.AccessLevel;
-import lombok.Getter;
-import lombok.Setter;
+import net.runelite.api.DecorativeObject;
+import net.runelite.api.GameObject;
+import net.runelite.api.ObjectDefinition;
+import net.runelite.api.Tile;
+import net.runelite.api.TileObject;
+import net.runelite.api.queries.TileObjectQuery;
+import net.runelite.client.flexo.Flexo;
 import net.runelite.api.Client;
-import net.runelite.api.GameState;
-import net.runelite.api.VarClientStr;
-import net.runelite.api.events.*;
+import net.runelite.api.MenuEntry;
+import net.runelite.api.events.FocusChanged;
+import net.runelite.api.events.AnimationChanged;
+import net.runelite.api.events.NpcSpawned;
+import net.runelite.api.events.NpcDespawned;
+import net.runelite.api.events.MenuEntryAdded;
+import net.runelite.api.events.MenuOptionClicked;
+import net.runelite.api.events.GameTick;
+import net.runelite.api.events.ConfigChanged;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.EventBus;
+import net.runelite.client.input.KeyListener;
 import net.runelite.client.input.KeyManager;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.plugins.PluginType;
 import net.runelite.client.plugins.stretchedmode.StretchedModeConfig;
-import net.runelite.client.util.HotkeyListener;
 
 @PluginDescriptor(
-        name = "Auto Clicker for Construction",
-        enabledByDefault = false,
-        type = PluginType.EXTERNAL
+	name = "Auto Clicker for Construction",
+	enabledByDefault = false,
+	type = PluginType.EXTERNAL
 )
-public class AutoConstructionPlugin extends Plugin
+
+public class AutoConstructionPlugin extends Plugin implements KeyListener
 {
-    @Inject
-    private Client client;
-    @Inject
-    private EventBus eventBus;
-    @Inject
-    private AutoConstructionConfig config;
-    @Inject
-    private KeyManager keyManager;
-    @Inject
-    private ConfigManager configManager;
-    private final BlockingQueue<Runnable> queue = new ArrayBlockingQueue<>(1);
-    private final ThreadPoolExecutor executorService = new ThreadPoolExecutor(1, 1,
-            10, TimeUnit.SECONDS, queue, new ThreadPoolExecutor.DiscardPolicy());
-    private boolean run;
-    @Getter(AccessLevel.PACKAGE)
-    @Setter(AccessLevel.PACKAGE)
-    private boolean toggledOn;
+	@Inject
+	private Client client;
+	@Inject
+	private EventBus eventBus;
+	@Inject
+	private AutoConstructionConfig config;
+	@Inject
+	private KeyManager keyManager;
+	@Inject
+	private ConfigManager configManager;
+	private boolean toggledOn;
+	private boolean butlerPresent;
+	private Flexo flexo;
+	private Point2D point;
+	private String lastClicked;
 
-    @Provides
-    AutoConstructionConfig getConfig(ConfigManager configManager)
-    {
-        return configManager.getConfig(AutoConstructionConfig.class);
-    }
+	@Provides
+	AutoConstructionConfig getConfig(ConfigManager configManager)
+	{
+		return configManager.getConfig(AutoConstructionConfig.class);
+	}
 
-    @Override
-    protected void startUp()
-    {
-        eventBus.subscribe(FocusChanged.class, this, this::onFocusChanged);
-        eventBus.subscribe(AnimationChanged.class, this, this::onAnimationChanged);
-        eventBus.subscribe(ConfigChanged.class, this, this::onConfigChanged);
-        eventBus.subscribe(GameTick.class, this, this::onGameTick);
-        eventBus.subscribe(MenuEntryAdded.class, this, this::onMenuEntryAdded);
-        eventBus.subscribe(MenuOptionClicked.class, this, this::onMenuOptionClicked);
-        eventBus.subscribe(NpcSpawned.class, this, this::onNpcSpawned);
-        eventBus.subscribe(NpcDespawned.class, this, this::onNpcDespawned);
-        keyManager.registerKeyListener(hotkeyListener);
-    }
+	@Override
+	protected void startUp()
+	{
+		keyManager.registerKeyListener(this);
+		eventBus.subscribe(FocusChanged.class, this, this::onFocusChanged);
+		eventBus.subscribe(AnimationChanged.class, this, this::onAnimationChanged);
+		eventBus.subscribe(ConfigChanged.class, this, this::onConfigChanged);
+		eventBus.subscribe(GameTick.class, this, this::onGameTick);
+		eventBus.subscribe(MenuEntryAdded.class, this, this::onMenuEntryAdded);
+		eventBus.subscribe(MenuOptionClicked.class, this, this::onMenuOptionClicked);
+		eventBus.subscribe(NpcSpawned.class, this, this::onNpcSpawned);
+		eventBus.subscribe(NpcDespawned.class, this, this::onNpcDespawned);
+		toggledOn = false;
+		flexo = null;
+		try
+		{
+			flexo = new Flexo();
+		}
+		catch (Exception e)
+		{
+			e.printStackTrace();
+		}
+	}
 
-    @Override
-    protected void shutDown()
-    {
-        keyManager.unregisterKeyListener(hotkeyListener);
-    }
+	@Override
+	protected void shutDown()
+	{
+		flexo = null;
+		toggledOn = false;
+		eventBus.unregister(this);
+		keyManager.unregisterKeyListener(this);
+	}
 
-    private void onFocusChanged(FocusChanged focusChanged)
-    {
-        toggledOn = false;
-    }
+	@Override
+	public void keyTyped(KeyEvent e)
+	{
 
-    private void onAnimationChanged(AnimationChanged animationChanged)
-    {
+	}
 
-    }
+	@Override
+	public void keyPressed(KeyEvent e)
+	{
+		final int keycode = config.hotkey().getKeyCode();
+		if (e.getKeyCode() == keycode && !toggledOn)
+		{
+			toggledOn = true;
+		}
+		else if (e.getKeyCode() == keycode && toggledOn)
+		{
+			toggledOn = false;
+		}
+	}
 
-    private void onConfigChanged(ConfigChanged configChanged)
-    {
+	@Override
+	public void keyReleased(KeyEvent e)
+	{
 
-    }
+	}
 
-    private void onGameTick(GameTick gameTick)
-    {
+	private void onFocusChanged(FocusChanged focusChanged)
+	{
+		toggledOn = false;
+	}
 
-    }
+	private void onAnimationChanged(AnimationChanged animationChanged)
+	{
 
-    private void onMenuEntryAdded(MenuEntryAdded entry)
-    {
-        if (toggledOn)
-        {
-            if (entry.getOption().equals("Build")) {
-                singleClick();
-            } else if (entry.getOption().equals("Remove")) {
-                singleClick();
-            } else if (entry.getOption().equals("Talk-to")) {
-                doubleClick();
-            }
-        }
-    }
+	}
 
-    private void onMenuOptionClicked(MenuOptionClicked entry)
-    {
+	private void onConfigChanged(ConfigChanged configChanged)
+	{
 
-    }
+	}
 
-    private void onNpcSpawned(NpcSpawned npc)
-    {
+	private void onGameTick(GameTick gameTick)
+	{
+		if (toggledOn)
+		{
+			MenuEntry[] entries = client.getMenuEntries();
+			for (MenuEntry entry : entries)
+			{
+				if (entry.getOption().equals("Talk-to"))
+				{
+					return;
+				}
+			}
+			for (MenuEntry entry : entries)
+			{
+				if (entry.getOption().equals("Build"))
+				{
+					if (!entry.getOption().equals(lastClicked))
+					{
+						//client.setLeftClickMenuEntry(entry);
+						singleClick();
+						return;
+					}
+				}
+			}
 
-    }
+		}
+	}
 
-    private void onNpcDespawned(NpcDespawned npc)
-    {
+	private void onMenuEntryAdded(MenuEntryAdded entry)
+	{
 
-    }
+	}
 
-    @Override
-    public void keyTyped(KeyEvent e)
-    {
+	private void onMenuOptionClicked(MenuOptionClicked entry)
+	{
+		lastClicked = entry.getOption();
+	}
 
-    }
+	private void onNpcSpawned(NpcSpawned npc)
+	{
+		if (toggledOn && npc.getActor().getName().equals("Demon butler"))
+		{
+			doubleClick();
+			flexo.holdKey(KeyEvent.VK_1, randomDelay(20, 40));
+			butlerPresent = true;
+		}
+	}
 
-    @Override
-    public void keyPressed(KeyEvent e)
-    {
-        final int keycode = config.hotkey().getKeyCode();
-        if (e.getKeyCode() == keycode && !toggledOn)
-        {
-            toggledOn = true;
-        }
-        else if (e.getKeyCode() == keycode && toggledOn)
-        {
-            toggledOn = false;
-        }
-    }
+	private void onNpcDespawned(NpcDespawned npc)
+	{
+		if (toggledOn && npc.getActor().getName().equals("Demon butler"))
+		{
+			singleClick();
+			butlerPresent = false;
+		}
+	}
 
-    @Override
-    public void keyReleased(KeyEvent e)
-    {
-        String chat = client.getVar(VarClientStr.CHATBOX_TYPED_TEXT);
-        if (chat.endsWith(String.valueOf(e.getKeyChar())))
-        {
-            chat = chat.substring(0, chat.length() - 1);
-            client.setVar(VarClientStr.CHATBOX_TYPED_TEXT, chat);
-        }
-    }
+	private void singleClick()
+	{
+		delayFirstClick();
+	}
 
-    private HotkeyListener hotkeyListener = new HotkeyListener(() -> config.hotkey())
-    {
-        @Override
-        public void hotkeyPressed()
-        {
-            run = !run;
-            executorService.submit(() ->
-            {
-                while (run)
-                {
-                    if (client.getGameState() != GameState.LOGGED_IN)
-                    {
-                        run = false;
-                        break;
-                    }
+	private void doubleClick()
+	{
+		delayFirstClick();
+		delaySecondClick();
+	}
 
-                    simLeftClick();
+	private void delayFirstClick()
+	{
+		final ScheduledExecutorService service = Executors.newSingleThreadScheduledExecutor();
+		service.schedule(this::simLeftClick, randomDelay(config.delayMin(), config.delayMax()), TimeUnit.MILLISECONDS);
+		service.shutdown();
+	}
 
-                    try
-                    {
-                        Thread.sleep(randomDelay(config.delayMin(), config.delayMax()));
-                    }
-                    catch (InterruptedException e)
-                    {
-                        e.printStackTrace();
-                    }
-                }
-            });
-        }
-    };
+	private void delaySecondClick()
+	{
+		final ScheduledExecutorService service = Executors.newSingleThreadScheduledExecutor();
+		service.schedule(this::simLeftClick, randomDelay(config.delayMin() * 2, config.delayMax() * 2), TimeUnit.MILLISECONDS);
+		service.shutdown();
+	}
 
-    private void singleClick()
-    {
-        delayFirstClick();
-    }
+	private void simLeftClick()
+	{
+		leftClick();
+	}
 
-    private void doubleClick()
-    {
-        delayFirstClick();
-        delaySecondClick();
-    }
+	public void leftClick()
+	{
+		double scalingFactor = configManager.getConfig(StretchedModeConfig.class).scalingFactor();
+		if (client.isStretchedEnabled())
+		{
+			double scale = 1 + (scalingFactor / 100);
 
-    private void delayFirstClick()
-    {
-        final ScheduledExecutorService service = Executors.newSingleThreadScheduledExecutor();
-        service.schedule(this::simLeftClick, randomDelay(config.delayMin(), config.delayMax()), TimeUnit.MILLISECONDS);
-        service.shutdown();
-    }
+			MouseEvent mousePressed =
+				new MouseEvent(client.getCanvas(), 501, System.currentTimeMillis(), 0, (int) (client.getMouseCanvasPosition().getX() * scale), (int) (client.getMouseCanvasPosition().getY() * scale), 1, false, 1);
+			client.getCanvas().dispatchEvent(mousePressed);
+			MouseEvent mouseReleased =
+				new MouseEvent(client.getCanvas(), 502, System.currentTimeMillis(), 0, (int) (client.getMouseCanvasPosition().getX() * scale), (int) (client.getMouseCanvasPosition().getY() * scale), 1, false, 1);
+			client.getCanvas().dispatchEvent(mouseReleased);
+			MouseEvent mouseClicked =
+				new MouseEvent(client.getCanvas(), 500, System.currentTimeMillis(), 0, (int) (client.getMouseCanvasPosition().getX() * scale), (int) (client.getMouseCanvasPosition().getY() * scale), 1, false, 1);
+			client.getCanvas().dispatchEvent(mouseClicked);
+		}
+		if (!client.isStretchedEnabled())
+		{
+			MouseEvent mousePressed =
+				new MouseEvent(client.getCanvas(), 501, System.currentTimeMillis(), 0, client.getMouseCanvasPosition().getX(), client.getMouseCanvasPosition().getY(), 1, false, 1);
+			client.getCanvas().dispatchEvent(mousePressed);
+			MouseEvent mouseReleased =
+				new MouseEvent(client.getCanvas(), 502, System.currentTimeMillis(), 0, client.getMouseCanvasPosition().getX(), client.getMouseCanvasPosition().getY(), 1, false, 1);
+			client.getCanvas().dispatchEvent(mouseReleased);
+			MouseEvent mouseClicked =
+				new MouseEvent(client.getCanvas(), 500, System.currentTimeMillis(), 0, client.getMouseCanvasPosition().getX(), client.getMouseCanvasPosition().getY(), 1, false, 1);
+			client.getCanvas().dispatchEvent(mouseClicked);
+		}
+	}
 
-    private void delaySecondClick()
-    {
-        final ScheduledExecutorService service = Executors.newSingleThreadScheduledExecutor();
-        service.schedule(this::simLeftClick, randomDelay(config.delayMin() * 3, config.delayMax() * 3), TimeUnit.MILLISECONDS);
-        service.shutdown();
-    }
+	private int randomDelay(int min, int max)
+	{
+		Random rand = new Random();
+		int n = rand.nextInt(max) + 1;
+		if (n < min)
+		{
+			n += min;
+		}
+		return n;
+	}
 
-    private void simLeftClick()
-    {
-        leftClick(client, configManager);
-    }
+	private TileObject findTileObject(Tile tile, int id)
+	{
+		if (tile == null)
+		{
+			return null;
+		}
 
-    public static void leftClick(Client client, ConfigManager configManager)
-    {
-        double scalingFactor = configManager.getConfig(StretchedModeConfig.class).scalingFactor();
-        if (client.isStretchedEnabled())
-        {
-            double scale = 1 + (scalingFactor / 100);
+		final GameObject[] tileGameObjects = tile.getGameObjects();
+		final DecorativeObject tileDecorativeObject = tile.getDecorativeObject();
 
-            MouseEvent mousePressed =
-                    new MouseEvent(client.getCanvas(), 501, System.currentTimeMillis(), 0, (int) (client.getMouseCanvasPosition().getX() * scale), (int) (client.getMouseCanvasPosition().getY() * scale), 1, false, 1);
-            client.getCanvas().dispatchEvent(mousePressed);
-            MouseEvent mouseReleased =
-                    new MouseEvent(client.getCanvas(), 502, System.currentTimeMillis(), 0, (int) (client.getMouseCanvasPosition().getX() * scale), (int) (client.getMouseCanvasPosition().getY() * scale), 1, false, 1);
-            client.getCanvas().dispatchEvent(mouseReleased);
-            MouseEvent mouseClicked =
-                    new MouseEvent(client.getCanvas(), 500, System.currentTimeMillis(), 0, (int) (client.getMouseCanvasPosition().getX() * scale), (int) (client.getMouseCanvasPosition().getY() * scale), 1, false, 1);
-            client.getCanvas().dispatchEvent(mouseClicked);
-        }
-        if (!client.isStretchedEnabled())
-        {
-            MouseEvent mousePressed =
-                    new MouseEvent(client.getCanvas(), 501, System.currentTimeMillis(), 0, client.getMouseCanvasPosition().getX(), client.getMouseCanvasPosition().getY(), 1, false, 1);
-            client.getCanvas().dispatchEvent(mousePressed);
-            MouseEvent mouseReleased =
-                    new MouseEvent(client.getCanvas(), 502, System.currentTimeMillis(), 0, client.getMouseCanvasPosition().getX(), client.getMouseCanvasPosition().getY(), 1, false, 1);
-            client.getCanvas().dispatchEvent(mouseReleased);
-            MouseEvent mouseClicked =
-                    new MouseEvent(client.getCanvas(), 500, System.currentTimeMillis(), 0, client.getMouseCanvasPosition().getX(), client.getMouseCanvasPosition().getY(), 1, false, 1);
-            client.getCanvas().dispatchEvent(mouseClicked);
-        }
-    }
+		if (tileDecorativeObject != null && tileDecorativeObject.getId() == id)
+		{
+			return tileDecorativeObject;
+		}
 
-    private int randomDelay(int min, int max)
-    {
-        Random rand = new Random();
-        int n = rand.nextInt(max) + 1;
-        if (n < min)
-        {
-            n += min;
-        }
-        return n;
-    }
+		for (GameObject object : tileGameObjects)
+		{
+			if (object == null)
+			{
+				continue;
+			}
+
+			if (object.getId() == id)
+			{
+				return object;
+			}
+
+			// Check impostors
+			final ObjectDefinition comp = client.getObjectDefinition(object.getId());
+
+			if (comp.getImpostorIds() != null)
+			{
+				for (int impostorId : comp.getImpostorIds())
+				{
+					if (impostorId == id)
+					{
+						return object;
+					}
+				}
+			}
+		}
+
+		return null;
+	}
 }
 

@@ -47,7 +47,7 @@ runtimeClasspath - Runtime classpath of source set 'main'.
 |         +--- org.apache.httpcomponents:httpcore:4.4.12
 |         +--- commons-logging:commons-logging:1.2
 |         \--- commons-codec:commons-codec:1.11
-+--- org.codehaus.plexus:plexus-utils:3.2.1
++--- org.codehaus.plexus:plexus-utils:3.3.0
 +--- org.javassist:javassist:3.26.0-GA
 +--- org.jetbrains:annotations:17.0.0
 +--- org.jogamp.gluegen:gluegen-rt:2.3.2

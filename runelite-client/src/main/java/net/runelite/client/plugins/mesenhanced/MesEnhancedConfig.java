@@ -31,25 +31,25 @@ import net.runelite.client.config.ConfigItem;
 @ConfigGroup("mesEnhanced")
 public interface MesEnhancedConfig extends Config
 {
-    @ConfigItem(
-            keyName = "leftClickLog",
-            name = "1 Click Lighting",
-            description = "This will allow you to left click logs to light them.",
-            position = 1
-    )
-    default boolean leftClickLog()
-    {
-        return false;
-    }
+	@ConfigItem(
+		keyName = "leftClickLog",
+		name = "1 Click Lighting",
+		description = "This will allow you to left click logs to light them.",
+		position = 1
+	)
+	default boolean leftClickLog()
+	{
+		return false;
+	}
 
-    @ConfigItem(
-            keyName = "quickBones",
-            name = "1 Click Bones",
-            description = "This will allow you to left click an altar to use your bones on them.",
-            position = 2
-    )
-    default boolean quickBones()
-    {
-        return false;
-    }
+	@ConfigItem(
+		keyName = "quickBones",
+		name = "1 Click Bones",
+		description = "This will allow you to left click an altar to use your bones on them.",
+		position = 2
+	)
+	default boolean quickBones()
+	{
+		return false;
+	}
 }
