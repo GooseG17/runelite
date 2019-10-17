@@ -286,7 +286,27 @@ public class OneClickPlugin extends Plugin
 		final int opcode = event.getOpcode();
 		targetMap.put(id, entry.getTarget());
 
-		if (type == Types.DARTS && opcode == MenuOpcode.ITEM_USE.getId() && DART_TIPS.contains(id))
+		if (opcode == MenuOpcode.ITEM_USE.getId() && ItemID.SALTPETRE == id)
+		{
+			if (findItem(ItemID.COMPOST) == -1)
+			{
+				return;
+			}
+			entry.setTarget("<col=ff9040>Compost<col=ffffff> -> " + targetMap.get(id));
+			event.setModified(true);
+		}
+		else if (opcode == MenuOpcode.NPC_FIRST_OPTION.getId() &&
+			event.getOption().toLowerCase().contains("talk") && event.getTarget().toLowerCase().contains("wounded soldier"))
+		{
+			if (findItem(ItemID.SHAYZIEN_MEDPACK) == -1)
+			{
+				return;
+			}
+			entry.setOption("Use");
+			entry.setTarget("<col=ff9040>Shayzien medpack<col=ffffff> -> " + event.getTarget());
+			event.setModified(true);
+		}
+		else if (type == Types.DARTS && opcode == MenuOpcode.ITEM_USE.getId() && DART_TIPS.contains(id))
 		{
 			if (findItem(ItemID.FEATHER) == -1)
 			{
@@ -431,6 +451,22 @@ public class OneClickPlugin extends Plugin
 		{
 			event.consume();
 		}
+		else if (entry.getOpcode() == MenuOpcode.NPC_FIRST_OPTION.getId() &&
+			event.getOption().contains("Shayzien medpack") && event.getTarget().toLowerCase().contains("wounded soldier"))
+		{
+			entry.setOpcode(MenuOpcode.ITEM_USE_ON_NPC.getId());
+			client.setSelectedItemWidget(WidgetInfo.INVENTORY.getId());
+			client.setSelectedItemSlot(findItem(ItemID.SHAYZIEN_MEDPACK));
+			client.setSelectedItemID(ItemID.SHAYZIEN_MEDPACK);
+		}
+		else if (opcode == MenuOpcode.ITEM_USE.getId() &&
+			target.contains("<col=ff9040>Saltpetre<col=ffffff> -> "))
+		{
+			entry.setOpcode(MenuOpcode.ITEM_USE_ON_WIDGET_ITEM.getId());
+			client.setSelectedItemWidget(WidgetInfo.INVENTORY.getId());
+			client.setSelectedItemSlot(findItem(ItemID.COMPOST));
+			client.setSelectedItemID(ItemID.COMPOST);
+		}
 		else if (type == Types.DARTS && opcode == MenuOpcode.ITEM_USE.getId() &&
 			target.contains("<col=ff9040>Feather<col=ffffff> -> "))
 		{
@@ -510,7 +546,7 @@ public class OneClickPlugin extends Plugin
 		}
 		else if (type == Types.HIGH_ALCH && entry.getOpcode() == MenuOpcode.RUNELITE.getId())
 		{
-			final String itemName = entry.getTarget().split("<col=00ff00>High Alchemy Item <col=ffffff> -> ")[1];
+			final String itemName = entry.getOption().split("<col=00ff00>High Alchemy Item <col=ffffff> -> ")[1];
 			alchItem = new AlchItem(itemName, entry.getIdentifier());
 		}
 		else if (type == Types.DWARF_CANNON && cannonFiring && entry.getIdentifier() == DWARF_MULTICANNON &&
@@ -522,7 +558,7 @@ public class OneClickPlugin extends Plugin
 			client.setSelectedItemID(ItemID.CANNONBALL);
 		}
 		else if (type == Types.BONES && entry.getOpcode() == MenuOpcode.GAME_OBJECT_FIRST_OPTION.getId() &&
-			entry.getTarget().contains("<col=ff9040>Bones<col=ffffff> -> ") && target.toLowerCase().contains("altar"))
+			entry.getOption().contains("<col=ff9040>Bones<col=ffffff> -> ") && target.toLowerCase().contains("altar"))
 		{
 			final int[] bonesLoc = findItem(BONE_SET);
 
@@ -538,7 +574,7 @@ public class OneClickPlugin extends Plugin
 			client.setSelectedItemID(bonesLoc[1]);
 		}
 		else if (type == Types.KARAMBWANS && entry.getOpcode() == MenuOpcode.GAME_OBJECT_FIRST_OPTION.getId() &&
-			entry.getTarget().contains("<col=ff9040>Raw karambwan<col=ffffff> -> "))
+			entry.getOption().contains("<col=ff9040>Raw karambwan<col=ffffff> -> "))
 		{
 			entry.setOpcode(MenuOpcode.ITEM_USE_ON_GAME_OBJECT.getId());
 			client.setSelectedItemWidget(WidgetInfo.INVENTORY.getId());

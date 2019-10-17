@@ -27,7 +27,7 @@ public interface AutoConstructionConfig extends Config
 	)
 	default int delayMin()
 	{
-		return 120;
+		return 150;
 	}
 
 	@ConfigItem(
@@ -38,7 +38,7 @@ public interface AutoConstructionConfig extends Config
 	)
 	default int delayMax()
 	{
-		return 160;
+		return 200;
 	}
 }
 

@@ -33,25 +33,20 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import javax.inject.Inject;
-import net.runelite.api.DecorativeObject;
-import net.runelite.api.GameObject;
-import net.runelite.api.ObjectDefinition;
-import net.runelite.api.Tile;
-import net.runelite.api.TileObject;
-import net.runelite.api.queries.TileObjectQuery;
-import net.runelite.client.flexo.Flexo;
 import net.runelite.api.Client;
 import net.runelite.api.MenuEntry;
-import net.runelite.api.events.FocusChanged;
 import net.runelite.api.events.AnimationChanged;
-import net.runelite.api.events.NpcSpawned;
-import net.runelite.api.events.NpcDespawned;
+import net.runelite.api.events.ConfigChanged;
+import net.runelite.api.events.FocusChanged;
+import net.runelite.api.events.GameTick;
 import net.runelite.api.events.MenuEntryAdded;
 import net.runelite.api.events.MenuOptionClicked;
-import net.runelite.api.events.GameTick;
-import net.runelite.api.events.ConfigChanged;
+import net.runelite.api.events.NpcDespawned;
+import net.runelite.api.events.NpcSpawned;
+import net.runelite.api.widgets.WidgetInfo;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.EventBus;
+import net.runelite.client.flexo.Flexo;
 import net.runelite.client.input.KeyListener;
 import net.runelite.client.input.KeyManager;
 import net.runelite.client.plugins.Plugin;
@@ -165,59 +160,91 @@ public class AutoConstructionPlugin extends Plugin implements KeyListener
 
 	private void onGameTick(GameTick gameTick)
 	{
-		if (toggledOn)
+		/*if (toggledOn)
 		{
-			MenuEntry[] entries = client.getMenuEntries();
-			for (MenuEntry entry : entries)
+			if (inventoryCount() >= 12 && client.getNpcs().isEmpty())
 			{
-				if (entry.getOption().equals("Talk-to"))
+				for (MenuEntry entry : client.getMenuEntries())
 				{
-					return;
-				}
-			}
-			for (MenuEntry entry : entries)
-			{
-				if (entry.getOption().equals("Build"))
-				{
-					if (!entry.getOption().equals(lastClicked))
+					if (entry.getOption().equals("Build") || entry.getOption().equals("Remove"))
 					{
-						//client.setLeftClickMenuEntry(entry);
-						singleClick();
-						return;
+						if (!entry.getOption().equals(lastClicked))
+						{
+							singleClick();
+							lastClicked = entry.getOption();
+							return;
+						}
 					}
 				}
 			}
 
-		}
+		}*/
 	}
 
 	private void onMenuEntryAdded(MenuEntryAdded entry)
 	{
-
+		if (toggledOn)
+		{
+			if (entry.getOption().equals("Talk-to"))
+			{
+				doubleClick();
+			}
+			else if (entry.getOption().equals("Build") && inventoryCount() >= 12 && !lastClicked.equals("Build"))
+			{
+				singleClick();
+				lastClicked = "Build";
+			}
+			else if (entry.getOption().equals("Remove") && inventoryCount() >= 12 && !lastClicked.equals("Remove"))
+			{
+				singleClick();
+				lastClicked = "Remove";
+			}
+		}
 	}
 
-	private void onMenuOptionClicked(MenuOptionClicked entry)
+	private void onMenuOptionClicked(MenuOptionClicked event)
 	{
-		lastClicked = entry.getOption();
+		if (toggledOn)
+		{
+			if (event.getOption().equals("Talk-to"))
+			{
+				event.setOpcode(event.getMenuOpcode().getId());
+				return;
+			}
+
+			for (MenuEntry entry : client.getMenuEntries())
+			{
+				if (entry.getOption().equals("Build") && !entry.getTarget().contains("Hotspot"))
+				{
+					event.setOpcode(entry.getMenuOpcode().getId());
+				}
+				else if (entry.getOption().equals("Remove") && entry.getTarget().contains("Door"))
+				{
+					event.setOpcode(entry.getMenuOpcode().getId());
+				}
+			}
+		}
 	}
 
 	private void onNpcSpawned(NpcSpawned npc)
 	{
-		if (toggledOn && npc.getActor().getName().equals("Demon butler"))
+		/*if (toggledOn && npc.getActor().getName().equals("Demon butler"))
 		{
 			doubleClick();
-			flexo.holdKey(KeyEvent.VK_1, randomDelay(20, 40));
-			butlerPresent = true;
-		}
+		}*/
 	}
 
 	private void onNpcDespawned(NpcDespawned npc)
 	{
-		if (toggledOn && npc.getActor().getName().equals("Demon butler"))
+		/*if (toggledOn && npc.getActor().getName().equals("Demon butler") && inventoryCount() >= 12)
 		{
 			singleClick();
-			butlerPresent = false;
-		}
+		}*/
+	}
+
+	private int inventoryCount()
+	{
+		return client.getWidget(WidgetInfo.INVENTORY).getWidgetItems().size();
 	}
 
 	private void singleClick()
@@ -241,7 +268,7 @@ public class AutoConstructionPlugin extends Plugin implements KeyListener
 	private void delaySecondClick()
 	{
 		final ScheduledExecutorService service = Executors.newSingleThreadScheduledExecutor();
-		service.schedule(this::simLeftClick, randomDelay(config.delayMin() * 2, config.delayMax() * 2), TimeUnit.MILLISECONDS);
+		service.schedule(this::simLeftClick, randomDelay(config.delayMin() * 4, config.delayMax() * 4), TimeUnit.MILLISECONDS);
 		service.shutdown();
 	}
 
@@ -290,51 +317,6 @@ public class AutoConstructionPlugin extends Plugin implements KeyListener
 			n += min;
 		}
 		return n;
-	}
-
-	private TileObject findTileObject(Tile tile, int id)
-	{
-		if (tile == null)
-		{
-			return null;
-		}
-
-		final GameObject[] tileGameObjects = tile.getGameObjects();
-		final DecorativeObject tileDecorativeObject = tile.getDecorativeObject();
-
-		if (tileDecorativeObject != null && tileDecorativeObject.getId() == id)
-		{
-			return tileDecorativeObject;
-		}
-
-		for (GameObject object : tileGameObjects)
-		{
-			if (object == null)
-			{
-				continue;
-			}
-
-			if (object.getId() == id)
-			{
-				return object;
-			}
-
-			// Check impostors
-			final ObjectDefinition comp = client.getObjectDefinition(object.getId());
-
-			if (comp.getImpostorIds() != null)
-			{
-				for (int impostorId : comp.getImpostorIds())
-				{
-					if (impostorId == id)
-					{
-						return object;
-					}
-				}
-			}
-		}
-
-		return null;
 	}
 }
 
