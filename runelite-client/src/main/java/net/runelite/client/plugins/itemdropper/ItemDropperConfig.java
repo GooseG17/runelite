@@ -34,7 +34,7 @@ public interface ItemDropperConfig extends Config
 	@ConfigItem(
 		keyName = "items",
 		name = "Items to Drop",
-		description = "Seperate with comma",
+		description = "Separate with comma",
 		position = 0
 	)
 	default String items()
