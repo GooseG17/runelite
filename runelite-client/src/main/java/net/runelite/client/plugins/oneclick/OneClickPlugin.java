@@ -295,6 +295,24 @@ public class OneClickPlugin extends Plugin
 			entry.setTarget("<col=ff9040>Compost<col=ffffff> -> " + targetMap.get(id));
 			event.setModified(true);
 		}
+		else if (opcode == MenuOpcode.ITEM_USE.getId() && ItemID.POT == id)
+		{
+			if (findItem(ItemID.VOLCANIC_SULPHUR) == -1 || findItem(ItemID.SALTPETRE) == -1 || findItem(ItemID.JUNIPER_CHARCOAL) == -1)
+			{
+				return;
+			}
+			entry.setTarget("<col=ff9040>Volcanic sulphur<col=ffffff> -> " + targetMap.get(id));
+			event.setModified(true);
+		}
+		else if (opcode == MenuOpcode.ITEM_USE.getId() && ItemID.DYNAMITE_POT == id)
+		{
+			if (findItem(ItemID.BALL_OF_WOOL) == -1)
+			{
+				return;
+			}
+			entry.setTarget("<col=ff9040>Ball of wool<col=ffffff> -> " + targetMap.get(id));
+			event.setModified(true);
+		}
 		else if (opcode == MenuOpcode.NPC_FIRST_OPTION.getId() &&
 			event.getOption().toLowerCase().contains("talk") && event.getTarget().toLowerCase().contains("wounded soldier"))
 		{
@@ -374,7 +392,7 @@ public class OneClickPlugin extends Plugin
 			event.setModified(true);
 		}
 		else if (type == Types.HIGH_ALCH && opcode == MenuOpcode.WIDGET_TYPE_2.getId() && alchItem != null &&
-			event.getOption().equals("Cast") && event.getTarget().equals("<col=00ff00>High Level Alchemy</col>"))
+			event.getOption().equals("Use") && event.getTarget().contains(alchItem.getName()))
 		{
 			entry.setOption("Cast");
 			entry.setTarget("<col=00ff00>High Level Alchemy</col><col=ffffff> -> " + alchItem.getName());
@@ -452,7 +470,7 @@ public class OneClickPlugin extends Plugin
 			event.consume();
 		}
 		else if (entry.getOpcode() == MenuOpcode.NPC_FIRST_OPTION.getId() &&
-			event.getOption().contains("Shayzien medpack") && event.getTarget().toLowerCase().contains("wounded soldier"))
+			event.getTarget().toLowerCase().contains("wounded soldier"))
 		{
 			entry.setOpcode(MenuOpcode.ITEM_USE_ON_NPC.getId());
 			client.setSelectedItemWidget(WidgetInfo.INVENTORY.getId());
@@ -460,12 +478,28 @@ public class OneClickPlugin extends Plugin
 			client.setSelectedItemID(ItemID.SHAYZIEN_MEDPACK);
 		}
 		else if (opcode == MenuOpcode.ITEM_USE.getId() &&
-			target.contains("<col=ff9040>Saltpetre<col=ffffff> -> "))
+			target.contains("<col=ff9040>Compost<col=ffffff> -> "))
 		{
 			entry.setOpcode(MenuOpcode.ITEM_USE_ON_WIDGET_ITEM.getId());
 			client.setSelectedItemWidget(WidgetInfo.INVENTORY.getId());
 			client.setSelectedItemSlot(findItem(ItemID.COMPOST));
 			client.setSelectedItemID(ItemID.COMPOST);
+		}
+		else if (opcode == MenuOpcode.ITEM_USE.getId() &&
+			target.contains("<col=ff9040>Volcanic sulphur<col=ffffff> -> "))
+		{
+			entry.setOpcode(MenuOpcode.ITEM_USE_ON_WIDGET_ITEM.getId());
+			client.setSelectedItemWidget(WidgetInfo.INVENTORY.getId());
+			client.setSelectedItemSlot(findItem(ItemID.VOLCANIC_SULPHUR));
+			client.setSelectedItemID(ItemID.VOLCANIC_SULPHUR);
+		}
+		else if (opcode == MenuOpcode.ITEM_USE.getId() &&
+			target.contains("<col=ff9040>Ball of wool<col=ffffff> -> "))
+		{
+			entry.setOpcode(MenuOpcode.ITEM_USE_ON_WIDGET_ITEM.getId());
+			client.setSelectedItemWidget(WidgetInfo.INVENTORY.getId());
+			client.setSelectedItemSlot(findItem(ItemID.BALL_OF_WOOL));
+			client.setSelectedItemID(ItemID.BALL_OF_WOOL);
 		}
 		else if (type == Types.DARTS && opcode == MenuOpcode.ITEM_USE.getId() &&
 			target.contains("<col=ff9040>Feather<col=ffffff> -> "))
@@ -531,7 +565,7 @@ public class OneClickPlugin extends Plugin
 			entry.setParam1(WidgetInfo.SPELL_MAGIC_IMBUE.getId());
 		}
 		else if (type == Types.HIGH_ALCH && opcode == MenuOpcode.WIDGET_TYPE_2.getId() && event.getOption().equals("Cast") &&
-			target.contains("<col=00ff00>High Level Alchemy</col><col=ffffff> -> "))
+			target.contains("High Level Alchemy"))
 		{
 			entry.setIdentifier(alchItem.getId());
 			entry.setOpcode(MenuOpcode.ITEM_USE_ON_WIDGET.getId());
@@ -544,9 +578,9 @@ public class OneClickPlugin extends Plugin
 		{
 			alchItem = null;
 		}
-		else if (type == Types.HIGH_ALCH && entry.getOpcode() == MenuOpcode.RUNELITE.getId())
+		else if (type == Types.HIGH_ALCH && entry.getOpcode() == MenuOpcode.RUNELITE.getId() && entry.getOption().equals("Set"))
 		{
-			final String itemName = entry.getOption().split("<col=00ff00>High Alchemy Item <col=ffffff> -> ")[1];
+			final String itemName = entry.getOption().split(" -> ")[1];
 			alchItem = new AlchItem(itemName, entry.getIdentifier());
 		}
 		else if (type == Types.DWARF_CANNON && cannonFiring && entry.getIdentifier() == DWARF_MULTICANNON &&
