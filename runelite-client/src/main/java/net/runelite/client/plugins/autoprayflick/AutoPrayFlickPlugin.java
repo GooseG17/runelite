@@ -293,12 +293,12 @@ public class AutoPrayFlickPlugin extends Plugin implements KeyListener, MouseLis
 		if (!isMouseOverPrayer())
 		{
 			Widget xpOrb = client.getWidget(WidgetInfo.MINIMAP_QUICK_PRAYER_ORB);
-			Point randomPoint = getClickPoint(xpOrb.getBounds(), client, configManager);
-			moveMouse(randomPoint, client);
+			Point randomPoint = getClickPoint(xpOrb.getBounds());
+			moveMouse(randomPoint);
 		}
 	}
 
-	private static void moveMouse(Point point, Client client)
+	private void moveMouse(Point point)
 	{
 		MouseEvent mouseEntered = new MouseEvent(client.getCanvas(), 504, System.currentTimeMillis(), 0, point.getX(), point.getY(), 0, false);
 		client.getCanvas().dispatchEvent(mouseEntered);
@@ -308,7 +308,7 @@ public class AutoPrayFlickPlugin extends Plugin implements KeyListener, MouseLis
 		client.getCanvas().dispatchEvent(mouseMoved);
 	}
 
-	public static void leftClick(Client client, ConfigManager configManager)
+	public void leftClick()
 	{
 		double scalingFactor = configManager.getConfig(StretchedModeConfig.class).scalingFactor();
 		if (client.isStretchedEnabled())
@@ -339,7 +339,7 @@ public class AutoPrayFlickPlugin extends Plugin implements KeyListener, MouseLis
 		}
 	}
 
-	private static Point getClickPoint(Rectangle rect, Client client, ConfigManager configManager)
+	private Point getClickPoint(Rectangle rect)
 	{
 		double scalingFactor = configManager.getConfig(StretchedModeConfig.class).scalingFactor();
 		boolean stretchedMode = client.isStretchedEnabled();
