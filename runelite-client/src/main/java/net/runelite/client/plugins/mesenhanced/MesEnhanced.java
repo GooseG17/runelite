@@ -26,13 +26,11 @@ package net.runelite.client.plugins.mesenhanced;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Provides;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import javax.inject.Inject;
-
 import net.runelite.api.Client;
 import net.runelite.api.InventoryID;
 import net.runelite.api.Item;
@@ -160,13 +158,13 @@ public class MesEnhanced extends Plugin
 			&& LIGHTABLE_LOGS.contains(id))
 		{
 			menuEntry.setOption(LIGHT);
-			menuEntry.setModified(true);
+			menuEntry.setModified();
 		}
 		else if (this.quickBone && bones && menuEntry.getOpcode() == MenuOpcode.GAME_OBJECT_FIRST_OPTION.getId()
 			&& menuEntry.getTarget().toLowerCase().contains("altar"))
 		{
 			menuEntry.setOption(QUICK_BONE);
-			menuEntry.setModified(true);
+			menuEntry.setModified();
 		}
 	}
 

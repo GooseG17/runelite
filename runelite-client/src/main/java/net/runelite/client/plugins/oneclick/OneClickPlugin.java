@@ -274,7 +274,7 @@ public class OneClickPlugin extends Plugin
 			SetHighAlchItem.setForceLeftClick(false);
 			menuList[1] = SetHighAlchItem;
 			event.setMenuEntries(menuList);
-			event.setModified(true);
+			event.setModified();
 		}
 	}
 
@@ -293,7 +293,7 @@ public class OneClickPlugin extends Plugin
 				return;
 			}
 			entry.setTarget("<col=ff9040>Compost<col=ffffff> -> " + targetMap.get(id));
-			event.setModified(true);
+			event.setModified();
 		}
 		else if (opcode == MenuOpcode.ITEM_USE.getId() && ItemID.POT == id)
 		{
@@ -302,7 +302,7 @@ public class OneClickPlugin extends Plugin
 				return;
 			}
 			entry.setTarget("<col=ff9040>Volcanic sulphur<col=ffffff> -> " + targetMap.get(id));
-			event.setModified(true);
+			event.setModified();
 		}
 		else if (opcode == MenuOpcode.ITEM_USE.getId() && ItemID.DYNAMITE_POT == id)
 		{
@@ -311,7 +311,7 @@ public class OneClickPlugin extends Plugin
 				return;
 			}
 			entry.setTarget("<col=ff9040>Ball of wool<col=ffffff> -> " + targetMap.get(id));
-			event.setModified(true);
+			event.setModified();
 		}
 		else if (opcode == MenuOpcode.NPC_FIRST_OPTION.getId() &&
 			event.getOption().toLowerCase().contains("talk") && event.getTarget().toLowerCase().contains("wounded soldier"))
@@ -322,7 +322,7 @@ public class OneClickPlugin extends Plugin
 			}
 			entry.setOption("Use");
 			entry.setTarget("<col=ff9040>Shayzien medpack<col=ffffff> -> " + event.getTarget());
-			event.setModified(true);
+			event.setModified();
 		}
 		else if (type == Types.DARTS && opcode == MenuOpcode.ITEM_USE.getId() && DART_TIPS.contains(id))
 		{
@@ -331,7 +331,7 @@ public class OneClickPlugin extends Plugin
 				return;
 			}
 			entry.setTarget("<col=ff9040>Feather<col=ffffff> -> " + targetMap.get(id));
-			event.setModified(true);
+			event.setModified();
 		}
 		else if (type == Types.FIREMAKING && opcode == MenuOpcode.ITEM_USE.getId() && LOG_ID.contains(id))
 		{
@@ -340,7 +340,7 @@ public class OneClickPlugin extends Plugin
 				return;
 			}
 			entry.setTarget("<col=ff9040>Tinderbox<col=ffffff> -> " + targetMap.get(id));
-			event.setModified(true);
+			event.setModified();
 		}
 		else if (type == Types.DARK_ESSENCE && opcode == MenuOpcode.ITEM_USE.getId() && id == ItemID.CHISEL)
 		{
@@ -349,7 +349,7 @@ public class OneClickPlugin extends Plugin
 				return;
 			}
 			entry.setTarget("<col=ff9040>Chisel<col=ffffff> -> <col=ff9040>Dark essence block");
-			event.setModified(true);
+			event.setModified();
 		}
 		else if (type == Types.BIRDHOUSES && opcode == MenuOpcode.GAME_OBJECT_SECOND_OPTION.getId() &&
 			BIRD_HOUSES_NAMES.contains(event.getTarget()))
@@ -361,7 +361,7 @@ public class OneClickPlugin extends Plugin
 			entry.setOption("Use");
 			entry.setTarget("<col=ff9040>Hops seed<col=ffffff> -> " + targetMap.get(id));
 			entry.setOpcode(MenuOpcode.ITEM_USE_ON_GAME_OBJECT.getId());
-			event.setModified(true);
+			event.setModified();
 		}
 		else if (type == Types.HERB_TAR && opcode == MenuOpcode.ITEM_USE.getId() && HERBS.contains(id))
 		{
@@ -370,7 +370,7 @@ public class OneClickPlugin extends Plugin
 				return;
 			}
 			entry.setTarget("<col=ff9040>Swamp tar<col=ffffff> -> " + targetMap.get(id));
-			event.setModified(true);
+			event.setModified();
 		}
 		else if (type == Types.LAVA_RUNES && opcode == MenuOpcode.GAME_OBJECT_FIRST_OPTION.getId() &&
 			event.getOption().equals("Craft-rune") && event.getTarget().equals("<col=ffff>Altar"))
@@ -384,19 +384,19 @@ public class OneClickPlugin extends Plugin
 			{
 				entry.setOption("Use");
 				entry.setTarget("<col=ff9040>Magic Imbue<col=ffffff> -> <col=ffff>Yourself");
-				event.setModified(true);
+				event.setModified();
 				return;
 			}
 			entry.setOption("Use");
 			entry.setTarget("<col=ff9040>Earth rune<col=ffffff> -> <col=ffff>Altar");
-			event.setModified(true);
+			event.setModified();
 		}
 		else if (type == Types.HIGH_ALCH && opcode == MenuOpcode.WIDGET_TYPE_2.getId() && alchItem != null &&
 			event.getOption().equals("Use") && event.getTarget().contains(alchItem.getName()))
 		{
 			entry.setOption("Cast");
 			entry.setTarget("<col=00ff00>High Level Alchemy</col><col=ffffff> -> " + alchItem.getName());
-			event.setModified(true);
+			event.setModified();
 		}
 		else if (type == Types.DWARF_CANNON && cannonFiring && event.getIdentifier() == DWARF_MULTICANNON &&
 			opcode == MenuOpcode.GAME_OBJECT_FIRST_OPTION.getId())
@@ -407,7 +407,7 @@ public class OneClickPlugin extends Plugin
 			}
 			entry.setOption("Use");
 			entry.setTarget("<col=ff9040>Cannonball<col=ffffff> -> <col=ffff>Dwarf multicannon");
-			event.setModified(true);
+			event.setModified();
 		}
 		else if (type == Types.BONES && opcode == MenuOpcode.GAME_OBJECT_FIRST_OPTION.getId() &&
 			event.getOption().toLowerCase().contains("pray") && event.getTarget().toLowerCase().contains("altar"))
@@ -418,7 +418,7 @@ public class OneClickPlugin extends Plugin
 			}
 			entry.setOption("Use");
 			entry.setTarget("<col=ff9040>Bones<col=ffffff> -> " + event.getTarget());
-			event.setModified(true);
+			event.setModified();
 		}
 		else if (type == Types.KARAMBWANS && opcode == MenuOpcode.GAME_OBJECT_FIRST_OPTION.getId() && event.getOption().equals("Cook"))
 		{
@@ -428,7 +428,7 @@ public class OneClickPlugin extends Plugin
 			}
 			entry.setOption("Use");
 			entry.setTarget("<col=ff9040>Raw karambwan<col=ffffff> -> " + entry.getTarget());
-			event.setModified(true);
+			event.setModified();
 		}
 		else if (type == Types.MIX_UNF_POTION && opcode == MenuOpcode.ITEM_USE.getId() && POTION_HERBS.contains(id))
 		{
@@ -437,7 +437,7 @@ public class OneClickPlugin extends Plugin
 				return;
 			}
 			entry.setTarget("<col=ff9040>Vial of liquid<col=ffffff> -> " + targetMap.get(id));
-			event.setModified(true);
+			event.setModified();
 		}
 		else if (type == Types.FINISHED_POTION && opcode == MenuOpcode.ITEM_USE.getId() && POTION_UNF_NAMES.contains(id))
 		{
@@ -446,7 +446,7 @@ public class OneClickPlugin extends Plugin
 				return;
 			}
 			entry.setTarget("<col=ff9040>Potion Ingredient<col=ffffff> -> " + targetMap.get(id));
-			event.setModified(true);
+			event.setModified();
 		}
 		else if (type == Types.POTION_UPGRADES && opcode == MenuOpcode.ITEM_USE.getId() && POTION_INGREDIENT.contains(id))
 		{
@@ -455,7 +455,7 @@ public class OneClickPlugin extends Plugin
 				return;
 			}
 			entry.setTarget("<col=ff9040>Upgrade Potion");
-			event.setModified(true);
+			event.setModified();
 		}
 	}
 

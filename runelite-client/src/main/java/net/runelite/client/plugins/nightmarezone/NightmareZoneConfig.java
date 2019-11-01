@@ -153,4 +153,15 @@ public interface NightmareZoneConfig extends Config
 		return Color.RED;
 	}
 
+	@ConfigItem(
+		keyName = "autonmz",
+		name = "Auto-NMZ",
+		description = "Uses potions and rock cake automatically",
+		position = 11
+	)
+	default boolean autoNMZ()
+	{
+		return false;
+	}
+
 }

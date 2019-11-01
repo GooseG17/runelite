@@ -43,6 +43,8 @@ import net.runelite.api.events.MenuEntryAdded;
 import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.events.NpcDespawned;
 import net.runelite.api.events.NpcSpawned;
+import net.runelite.api.events.WallObjectDespawned;
+import net.runelite.api.events.WallObjectSpawned;
 import net.runelite.api.widgets.WidgetInfo;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.EventBus;
@@ -96,6 +98,8 @@ public class AutoConstructionPlugin extends Plugin implements KeyListener
 		eventBus.subscribe(MenuOptionClicked.class, this, this::onMenuOptionClicked);
 		eventBus.subscribe(NpcSpawned.class, this, this::onNpcSpawned);
 		eventBus.subscribe(NpcDespawned.class, this, this::onNpcDespawned);
+		eventBus.subscribe(WallObjectSpawned.class, this, this::onWallObjectSpawned);
+		eventBus.subscribe(WallObjectDespawned.class, this, this::onWallObjectDespawned);
 		toggledOn = false;
 		flexo = null;
 		try
@@ -242,6 +246,16 @@ public class AutoConstructionPlugin extends Plugin implements KeyListener
 		}*/
 	}
 
+	private void onWallObjectSpawned(WallObjectSpawned event)
+	{
+
+	}
+
+	private void onWallObjectDespawned(WallObjectDespawned event)
+	{
+
+	}
+
 	private int inventoryCount()
 	{
 		return client.getWidget(WidgetInfo.INVENTORY).getWidgetItems().size();
@@ -279,9 +293,9 @@ public class AutoConstructionPlugin extends Plugin implements KeyListener
 
 	public void leftClick()
 	{
-		double scalingFactor = configManager.getConfig(StretchedModeConfig.class).scalingFactor();
 		if (client.isStretchedEnabled())
 		{
+			double scalingFactor = configManager.getConfig(StretchedModeConfig.class).scalingFactor();
 			double scale = 1 + (scalingFactor / 100);
 
 			MouseEvent mousePressed =
@@ -294,7 +308,7 @@ public class AutoConstructionPlugin extends Plugin implements KeyListener
 				new MouseEvent(client.getCanvas(), 500, System.currentTimeMillis(), 0, (int) (client.getMouseCanvasPosition().getX() * scale), (int) (client.getMouseCanvasPosition().getY() * scale), 1, false, 1);
 			client.getCanvas().dispatchEvent(mouseClicked);
 		}
-		if (!client.isStretchedEnabled())
+		else
 		{
 			MouseEvent mousePressed =
 				new MouseEvent(client.getCanvas(), 501, System.currentTimeMillis(), 0, client.getMouseCanvasPosition().getX(), client.getMouseCanvasPosition().getY(), 1, false, 1);

@@ -31,8 +31,11 @@ import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.util.Arrays;
 import java.util.Random;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import javax.inject.Inject;
 import lombok.extern.slf4j.Slf4j;
@@ -84,6 +87,11 @@ public class AutoPrayFlickPlugin extends Plugin implements KeyListener, MouseLis
 	private EventBus eventBus;
 	private boolean held = false;
 	private boolean firstFlick = false;
+
+	private final BlockingQueue<Runnable> queue = new ArrayBlockingQueue<>(1);
+	private final ThreadPoolExecutor executorService = new ThreadPoolExecutor(
+		1, 1, 25, TimeUnit.SECONDS, queue, new ThreadPoolExecutor.DiscardPolicy()
+	);
 
 	private static int randomDelay(int min, int max)
 	{
@@ -153,8 +161,11 @@ public class AutoPrayFlickPlugin extends Plugin implements KeyListener, MouseLis
 			}
 			if (p != 29 && !toggleFlick)
 			{
-				mouseOverPrayer();
-				singleClick();
+				executorService.submit(() ->
+				{
+					mouseOverPrayer();
+					singleClick();
+				});
 			}
 		}
 		else if (e.getKeyCode() == keycode && !toggleFlick && !held)
@@ -200,31 +211,34 @@ public class AutoPrayFlickPlugin extends Plugin implements KeyListener, MouseLis
 		{
 			return;
 		}
-		if (toggleFlick && config.clicks())
+		executorService.submit(() ->
 		{
-			int p = 0;
-			for (Prayer prayer : Prayer.values())
+			if (toggleFlick && config.clicks())
 			{
-				if (!client.isPrayerActive(prayer))
+				int p = 0;
+				for (Prayer prayer : Prayer.values())
 				{
-					p++;
+					if (!client.isPrayerActive(prayer))
+					{
+						p++;
+					}
+				}
+				if (p == 29 && !firstFlick)
+				{
+					singleClick();
+					return;
+				}
+				doubleClick();
+				if (firstFlick)
+				{
+					firstFlick = false;
 				}
 			}
-			if (p == 29 && !firstFlick)
+			if (toggleFlick && !config.clicks())
 			{
 				singleClick();
-				return;
 			}
-			doubleClick();
-			if (firstFlick)
-			{
-				firstFlick = false;
-			}
-		}
-		if (toggleFlick && !config.clicks())
-		{
-			singleClick();
-		}
+		});
 	}
 
 	//private void onFocusChanged(FocusChanged focusChanged)
@@ -269,7 +283,7 @@ public class AutoPrayFlickPlugin extends Plugin implements KeyListener, MouseLis
 		}
 		if (isMouseOverPrayer())
 		{
-			leftClick(client, configManager);
+			leftClick();
 		}
 	}
 

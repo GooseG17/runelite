@@ -25,30 +25,44 @@
 package net.runelite.client.plugins.nightmarezone;
 
 import com.google.inject.Provides;
-
 import java.awt.Color;
+import java.awt.Rectangle;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import lombok.AccessLevel;
-import java.time.Duration;
-import java.time.Instant;
 import lombok.Getter;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
+import net.runelite.api.ItemID;
+import net.runelite.api.Point;
+import net.runelite.api.Skill;
 import net.runelite.api.Varbits;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.ConfigChanged;
 import net.runelite.api.events.GameTick;
+import net.runelite.api.events.NpcDespawned;
+import net.runelite.api.util.Text;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetInfo;
+import net.runelite.api.widgets.WidgetItem;
 import net.runelite.client.Notifier;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.EventBus;
+import net.runelite.client.flexo.Flexo;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
+import net.runelite.client.plugins.stretchedmode.StretchedModeConfig;
 import net.runelite.client.ui.overlay.OverlayManager;
-import net.runelite.api.util.Text;
 
 @PluginDescriptor(
 	name = "Nightmare Zone",
@@ -69,6 +83,9 @@ public class NightmareZonePlugin extends Plugin
 
 	@Inject
 	private OverlayManager overlayManager;
+
+	@Inject
+	private ConfigManager configManager;
 
 	@Inject
 	private NightmareZoneConfig config;
@@ -98,6 +115,13 @@ public class NightmareZonePlugin extends Plugin
 	private boolean ultimateForceNotification;
 	private boolean overloadNotification;
 	private boolean absorptionNotification;
+	private boolean autonmz;
+	private int maxHP;
+	private int minStatBoost;
+	private Flexo flexo;
+	private BlockingQueue<Runnable> queue = new ArrayBlockingQueue<>(1);
+	private ThreadPoolExecutor executorService = new ThreadPoolExecutor(1, 1, 1, TimeUnit.SECONDS, queue,
+		new ThreadPoolExecutor.DiscardPolicy());
 	@Getter(AccessLevel.PACKAGE)
 	private int absorptionThreshold;
 	@Getter(AccessLevel.PACKAGE)
@@ -105,9 +129,43 @@ public class NightmareZonePlugin extends Plugin
 	@Getter(AccessLevel.PACKAGE)
 	private Color absorptionColorBelowThreshold;
 
+	private static final int[] ABSORB_POTION = {
+		ItemID.ABSORPTION_1,
+		ItemID.ABSORPTION_2,
+		ItemID.ABSORPTION_3,
+		ItemID.ABSORPTION_4
+	};
+	private static final int[] COMBAT_POTION = {
+		ItemID.SUPER_COMBAT_POTION1,
+		ItemID.SUPER_COMBAT_POTION1_23549,
+		ItemID.SUPER_COMBAT_POTION2,
+		ItemID.SUPER_COMBAT_POTION2_23547,
+		ItemID.SUPER_COMBAT_POTION3,
+		ItemID.SUPER_COMBAT_POTION3_23545,
+		ItemID.SUPER_COMBAT_POTION4,
+		ItemID.SUPER_COMBAT_POTION4_23543
+	};
+	private static final int[] ROCK_CAKE = {
+		ItemID.DWARVEN_ROCK_CAKE,
+		ItemID.DWARVEN_ROCK_CAKE_7510
+	};
+
 	@Override
 	protected void startUp() throws Exception
 	{
+		Flexo.client = client;
+		executorService.submit(() ->
+		{
+			flexo = null;
+			try
+			{
+				flexo = new Flexo();
+			}
+			catch (Exception e)
+			{
+				e.printStackTrace();
+			}
+		});
 		updateConfig();
 		addSubscriptions();
 
@@ -138,6 +196,7 @@ public class NightmareZonePlugin extends Plugin
 		eventBus.subscribe(ConfigChanged.class, this, this::onConfigChanged);
 		eventBus.subscribe(GameTick.class, this, this::onGameTick);
 		eventBus.subscribe(ChatMessage.class, this, this::onChatMessage);
+		eventBus.subscribe(NpcDespawned.class, this, this::onNpcDespawned);
 	}
 
 	private void onConfigChanged(ConfigChanged event)
@@ -172,6 +231,10 @@ public class NightmareZonePlugin extends Plugin
 			}
 
 			return;
+		}
+		else if (autonmz)
+		{
+
 		}
 
 		if (this.absorptionNotification)
@@ -234,6 +297,38 @@ public class NightmareZonePlugin extends Plugin
 		}
 	}
 
+	private void onNpcDespawned(NpcDespawned npc)
+	{
+		if (autonmz && !isNotInNightmareZone())
+		{
+			if (!isCombatPotionActive() || client.getLocalPlayer().getHealth() > maxHP || !isAbsorptionActive())
+			{
+				int order = randomDelay(1, 3);
+				if (order == 1)
+				{
+					useRockCake();
+					drinkAbsorb();
+					drinkCombatPot();
+					setValues();
+				}
+				else if (order == 2)
+				{
+					useRockCake();
+					drinkCombatPot();
+					drinkAbsorb();
+					setValues();
+				}
+				else if (order == 3)
+				{
+					drinkCombatPot();
+					useRockCake();
+					drinkAbsorb();
+					setValues();
+				}
+			}
+		}
+	}
+
 	private void checkAbsorption()
 	{
 		int absorptionPoints = client.getVar(Varbits.NMZ_ABSORPTION);
@@ -253,6 +348,135 @@ public class NightmareZonePlugin extends Plugin
 				absorptionNotificationSend = false;
 			}
 		}
+	}
+
+	private boolean isAbsorptionActive()
+	{
+		return client.getVar(Varbits.NMZ_ABSORPTION) > 50;
+	}
+
+	private boolean isCombatPotionActive()
+	{
+		return (client.getBoostedSkillLevel(Skill.STRENGTH) - client.getRealSkillLevel(Skill.STRENGTH)) > minStatBoost;
+	}
+
+	private void useRockCake()
+	{
+		mouseItem(ROCK_CAKE);
+		while (client.getLocalPlayer().getHealth() > 1)
+		{
+			executorService.submit(() ->
+			{
+				flexo.delay(randomDelay(610, 680));
+				click();
+			});
+		}
+	}
+
+	private void drinkAbsorb()
+	{
+		while (client.getVar(Varbits.NMZ_ABSORPTION) < 951)
+		{
+			mouseItem(ABSORB_POTION);
+			executorService.submit(() ->
+			{
+				for (int i = 0; i < randomDelay(4, 7); i++)
+				{
+					flexo.delay(randomDelay(610, 680));
+					click();
+				}
+			});
+		}
+	}
+
+	private void drinkCombatPot()
+	{
+		if (client.getBoostedSkillLevel(Skill.STRENGTH) - client.getRealSkillLevel(Skill.STRENGTH) < 6)
+		{
+			clickItem(COMBAT_POTION);
+		}
+	}
+
+	private void mouseItem(int[] itemIds)
+	{
+		Rectangle rect = getWidgetItems(itemIds).get(0).getCanvasBounds();
+		Point p = getClickPoint(rect);
+		Point pos = client.getMouseCanvasPosition();
+		if (!rect.contains(pos.getX(), pos.getY()))
+		{
+			flexo.mouseMove(p.getX(), p.getY());
+		}
+	}
+
+	private void click()
+	{
+		flexo.mousePressAndRelease(1);
+	}
+
+	private void clickItem(int[] itemIds)
+	{
+		mouseItem(itemIds);
+		click();
+	}
+
+	private void setValues()
+	{
+		maxHP = ThreadLocalRandom.current().nextInt(3, 9 + 1);
+		minStatBoost = ThreadLocalRandom.current().nextInt(2, 5 + 1);
+	}
+
+	private List<WidgetItem> getWidgetItems(int[] itemIds)
+	{
+		Widget inventoryWidget = client.getWidget(WidgetInfo.INVENTORY);
+
+		ArrayList<Integer> itemIDs = new ArrayList<>();
+
+		for (int i : itemIds)
+		{
+			itemIDs.add(i);
+		}
+
+		List<WidgetItem> listToReturn = new ArrayList<>();
+
+		for (WidgetItem item : inventoryWidget.getWidgetItems())
+		{
+			if (itemIDs.contains(item.getId()))
+			{
+				listToReturn.add(item);
+			}
+		}
+
+		return listToReturn;
+	}
+
+	private Point getClickPoint(Rectangle rect)
+	{
+		int x, y;
+		if (randomDelay(0, 10) > 1)
+		{
+			x = randomDelay(rect.x, rect.x + (rect.width / 2));
+			y = randomDelay(rect.y, rect.y + (rect.height / 2));
+		}
+		else
+		{
+			x = randomDelay(rect.x, rect.x + (int) (rect.width * .9));
+			y = randomDelay(rect.y, rect.y + (int) (rect.height * .9));
+		}
+		if (client.isStretchedEnabled())
+		{
+			double scalingFactor = configManager.getConfig(StretchedModeConfig.class).scalingFactor();
+			double scale = 1 + (scalingFactor / 100);
+			return new Point((int) (x * scale), (int) (y * scale));
+		}
+		else
+		{
+			return new Point(x, y);
+		}
+	}
+
+	private int randomDelay(int min, int max)
+	{
+		return ThreadLocalRandom.current().nextInt(min, max + 1);
 	}
 
 	boolean isNotInNightmareZone()
@@ -299,5 +523,6 @@ public class NightmareZonePlugin extends Plugin
 		this.absorptionThreshold = config.absorptionThreshold();
 		this.absorptionColorAboveThreshold = config.absorptionColorAboveThreshold();
 		this.absorptionColorBelowThreshold = config.absorptionColorBelowThreshold();
+		this.autonmz = config.autoNMZ();
 	}
 }
