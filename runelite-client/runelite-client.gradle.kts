@@ -38,14 +38,17 @@ plugins {
     java
 }
 
+
+apply<BootstrapPlugin>()
+
 description = "RuneLite Client"
 
 dependencies {
     annotationProcessor(Libraries.lombok)
 
     compileOnly(Libraries.javax)
-    compileOnly(Libraries.orangeExtensions)
     compileOnly(Libraries.lombok)
+    compileOnly(Libraries.orangeExtensions)
 
     implementation(Libraries.logback)
     implementation(Libraries.gson)
@@ -61,36 +64,30 @@ dependencies {
     implementation(Libraries.substance)
     implementation(Libraries.jopt)
     implementation(Libraries.apacheCommonsText)
-    implementation(Libraries.httpcore)
-    implementation(Libraries.httpmime)
     implementation(Libraries.plexus)
-    implementation(Libraries.javassist)
     implementation(Libraries.annotations)
     implementation(Libraries.jogampGluegen)
     implementation(Libraries.jogampJogl)
     implementation(Libraries.jooq)
     implementation(Libraries.jooqCodegen)
     implementation(Libraries.jooqMeta)
-    implementation(Libraries.asmTree)
+    implementation(Libraries.sentry)
     implementation(Libraries.slf4jApi)
-    implementation(Libraries.jclCore)
     implementation(project(":http-api"))
     implementation(project(":runelite-api"))
-    implementation(Libraries.jbsdiff) {
-        exclude(module = "xz")
-    }
     implementation(Libraries.naturalMouse)
-    runtime(Libraries.trident)
-    runtime(Libraries.jogampGluegenLinuxAmd64)
-    runtime(Libraries.jogampGluegenLinuxI586)
-    runtime(Libraries.jogampGluegenWindowsAmd64)
-    runtime(Libraries.jogampGluegenWindowsI586)
-    runtime(Libraries.jogampJoglLinuxAmd64)
-    runtime(Libraries.jogampJoglLinuxI586)
-    runtime(Libraries.jogampJoglWindowsAmd64)
-    runtime(Libraries.jogampJoglWindowsI586)
-    runtime(project(":injected-client"))
-    runtime(project(":runescape-api"))
+
+    runtimeOnly(Libraries.trident)
+    runtimeOnly(Libraries.jogampGluegenLinuxAmd64)
+    runtimeOnly(Libraries.jogampGluegenLinuxI586)
+    runtimeOnly(Libraries.jogampGluegenWindowsAmd64)
+    runtimeOnly(Libraries.jogampGluegenWindowsI586)
+    runtimeOnly(Libraries.jogampJoglLinuxAmd64)
+    runtimeOnly(Libraries.jogampJoglLinuxI586)
+    runtimeOnly(Libraries.jogampJoglWindowsAmd64)
+    runtimeOnly(Libraries.jogampJoglWindowsI586)
+    runtimeOnly(project(":injected-client"))
+    runtimeOnly(project(":runescape-api"))
 
     testAnnotationProcessor(Libraries.lombok)
 
@@ -109,23 +106,27 @@ fun formatDate(date: Date?) = with(date ?: Date()) {
     SimpleDateFormat("MM-dd-yyyy").format(this)
 }
 
-tasks {
-    register<DependencyReportTask>("dependencyReportFile") {
-        outputFile = file("dependencies.txt")
-        setConfiguration("runtimeClasspath")
+fun launcherVersion(): String {
+    if (project.hasProperty("releaseBuild")) {
+        return ProjectVersions.launcherVersion
     }
+    return "-1"
+}
 
+tasks {
     build {
         finalizedBy("shadowJar")
     }
 
-    "processResources"(ProcessResources::class) {
+    processResources {
+
+
         val tokens = mapOf(
                 "project.version" to ProjectVersions.rlVersion,
                 "rs.version" to ProjectVersions.rsversion.toString(),
                 "open.osrs.version" to ProjectVersions.openosrsVersion,
                 "open.osrs.builddate" to formatDate(Date()),
-                "launcher.version" to ProjectVersions.launcherVersion
+                "launcher.version" to launcherVersion()
         )
 
         inputs.properties(tokens)
@@ -138,16 +139,13 @@ tasks {
     }
 
     jar {
+
         manifest {
             attributes(mutableMapOf("Main-Class" to "net.runelite.client.RuneLite"))
         }
     }
 
     shadowJar {
-        dependsOn("dependencyReportFile")
-
         archiveClassifier.set("shaded")
-
-        exclude("net/runelite/injector/**")
     }
 }

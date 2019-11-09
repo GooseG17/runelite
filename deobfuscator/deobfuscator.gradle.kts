@@ -35,11 +35,12 @@ dependencies {
     deobjars(group = "net.runelite.rs", name = "vanilla", version = ProjectVersions.rsversion.toString())
     deobjars(project(":runescape-client"))
 
-    implementation(Libraries.gson)
-    implementation(Libraries.guava)
-    implementation(Libraries.fernflower)
+    implementation(Libraries.annotations)
     implementation(Libraries.asmAll)
     implementation(Libraries.asmUtil)
+    implementation(Libraries.fernflower)
+    implementation(Libraries.gson)
+    implementation(Libraries.guava)
     implementation(Libraries.slf4jApi)
     implementation(project(":runelite-api"))
     implementation(project(":runescape-api"))
@@ -58,7 +59,7 @@ tasks {
             "rs.client" to deobjars.find { it.name.startsWith("runescape-client") }.toString().replace("\\", "/")
     )
 
-    "processResources"(ProcessResources::class) {
+    processResources  {
         inputs.properties(tokens)
 
         from("src/main/resources") {
@@ -68,7 +69,7 @@ tasks {
         }
     }
 
-    "processTestResources"(ProcessResources::class) {
+    processTestResources {
         inputs.properties(tokens)
 
         from("src/test/resources") {
