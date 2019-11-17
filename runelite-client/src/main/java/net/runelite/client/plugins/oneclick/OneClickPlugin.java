@@ -1,9 +1,16 @@
+/*
+ * Copyright (c) 2019, ganom <https://github.com/Ganom>
+ * Copyright (c) 2019, TomC <https://github.com/tomcylke>
+ * All rights reserved.
+ * Licensed under GPL3, see LICENSE for the full scope.
+ */
 package net.runelite.client.plugins.oneclick;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.inject.Provides;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import javax.inject.Inject;
@@ -13,9 +20,6 @@ import net.runelite.api.DynamicObject;
 import net.runelite.api.Entity;
 import net.runelite.api.GameObject;
 import net.runelite.api.GameState;
-import net.runelite.api.InventoryID;
-import net.runelite.api.Item;
-import net.runelite.api.ItemContainer;
 import net.runelite.api.ItemID;
 import net.runelite.api.MenuEntry;
 import net.runelite.api.MenuOpcode;
@@ -25,7 +29,6 @@ import net.runelite.api.Skill;
 import net.runelite.api.SpriteID;
 import net.runelite.api.Varbits;
 import net.runelite.api.events.ChatMessage;
-import net.runelite.api.events.ConfigChanged;
 import net.runelite.api.events.GameObjectSpawned;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
@@ -34,35 +37,62 @@ import net.runelite.api.events.MenuOpened;
 import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetInfo;
+import net.runelite.api.widgets.WidgetItem;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.EventBus;
+import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.plugins.PluginType;
+import org.apache.commons.lang3.tuple.Pair;
 
 @PluginDescriptor(
 	name = "One Click",
-	description = "Osbuddy in runelite+",
+	description = "OP One Click methods.",
 	enabledByDefault = false,
 	type = PluginType.EXTERNAL
 )
 public class OneClickPlugin extends Plugin
 {
-	private static final Set<Integer> DART_TIPS = ImmutableSet.of(ItemID.BRONZE_DART_TIP, ItemID.IRON_DART_TIP,
-		ItemID.STEEL_DART_TIP, ItemID.MITHRIL_DART_TIP, ItemID.ADAMANT_DART_TIP, ItemID.RUNE_DART_TIP, ItemID.DRAGON_DART_TIP, ItemID.UNFINISHED_BROAD_BOLTS
+	private static final Set<Integer> BOLTS = ImmutableSet.of(
+		ItemID.BRONZE_BOLTS_UNF, ItemID.IRON_BOLTS_UNF, ItemID.STEEL_BOLTS_UNF,
+		ItemID.MITHRIL_BOLTS_UNF, ItemID.ADAMANT_BOLTSUNF, ItemID.RUNITE_BOLTS_UNF,
+		ItemID.DRAGON_BOLTS_UNF, ItemID.UNFINISHED_BROAD_BOLTS
 	);
-	private static final Set<Integer> LOG_ID = ImmutableSet.of(ItemID.LOGS, ItemID.OAK_LOGS, ItemID.WILLOW_LOGS, ItemID.TEAK_LOGS,
-		ItemID.MAPLE_LOGS, ItemID.MAHOGANY_LOGS, ItemID.YEW_LOGS, ItemID.MAGIC_LOGS, ItemID.REDWOOD_LOGS
+	private static final Set<Integer> ARROW_TIPS = ImmutableSet.of(
+		ItemID.BRONZE_ARROWTIPS, ItemID.IRON_ARROWTIPS, ItemID.STEEL_ARROWTIPS,
+		ItemID.MITHRIL_ARROWTIPS, ItemID.ADAMANT_ARROWTIPS, ItemID.RUNE_ARROWTIPS,
+		ItemID.DRAGON_ARROWTIPS, ItemID.BROAD_ARROWHEADS
 	);
-	private static final Set<Integer> HOPS_SEED = ImmutableSet.of(ItemID.BARLEY_SEED, ItemID.HAMMERSTONE_SEED,
-		ItemID.ASGARNIAN_SEED, ItemID.JUTE_SEED, ItemID.YANILLIAN_SEED, ItemID.KRANDORIAN_SEED, ItemID.WILDBLOOD_SEED
+	private static final Set<Integer> DART_TIPS = ImmutableSet.of(
+		ItemID.BRONZE_DART_TIP, ItemID.IRON_DART_TIP, ItemID.STEEL_DART_TIP,
+		ItemID.MITHRIL_DART_TIP, ItemID.ADAMANT_DART_TIP, ItemID.RUNE_DART_TIP,
+		ItemID.DRAGON_DART_TIP
 	);
-	private static final Set<Integer> HERBS = ImmutableSet.of(ItemID.GUAM_LEAF, ItemID.MARRENTILL, ItemID.TARROMIN, ItemID.HARRALANDER
+	private static final Set<Integer> LOG_ID = ImmutableSet.of(
+		ItemID.LOGS, ItemID.OAK_LOGS, ItemID.WILLOW_LOGS, ItemID.TEAK_LOGS,
+		ItemID.MAPLE_LOGS, ItemID.MAHOGANY_LOGS, ItemID.YEW_LOGS, ItemID.MAGIC_LOGS,
+		ItemID.REDWOOD_LOGS
 	);
-	private static final Set<Integer> BONE_SET = ImmutableSet.of(ItemID.BONES, ItemID.WOLF_BONE, ItemID.BURNT_BONES, ItemID.MONKEY_BONES,
-		ItemID.BAT_BONES, ItemID.JOGRE_BONE, ItemID.BIG_BONES, ItemID.ZOGRE_BONE, ItemID.SHAIKAHAN_BONES, ItemID.BABYDRAGON_BONES,
-		ItemID.WYRM_BONES, ItemID.DRAGON_BONES, ItemID.DRAKE_BONES, ItemID.FAYRG_BONES, ItemID.LAVA_DRAGON_BONES, ItemID.RAURG_BONES,
-		ItemID.HYDRA_BONES, ItemID.DAGANNOTH_BONES, ItemID.OURG_BONES, ItemID.SUPERIOR_DRAGON_BONES, ItemID.WYVERN_BONES
+	private static final Set<Integer> HOPS_SEED = ImmutableSet.of(
+		ItemID.BARLEY_SEED, ItemID.HAMMERSTONE_SEED, ItemID.ASGARNIAN_SEED,
+		ItemID.JUTE_SEED, ItemID.YANILLIAN_SEED, ItemID.KRANDORIAN_SEED, ItemID.WILDBLOOD_SEED
+	);
+	private static final Set<Integer> TITHE_SEEDS = ImmutableSet.of(
+		ItemID.GOLOVANOVA_SEED, ItemID.BOLOGANO_SEED, ItemID.LOGAVANO_SEED
+	);
+	private static final Set<Integer> HERBS = ImmutableSet.of(
+		ItemID.GUAM_LEAF, ItemID.MARRENTILL, ItemID.TARROMIN, ItemID.HARRALANDER
+	);
+	private static final Set<Integer> BONE_SET = ImmutableSet.of(
+		ItemID.BONES, ItemID.WOLF_BONE, ItemID.BURNT_BONES, ItemID.MONKEY_BONES, ItemID.BAT_BONES,
+		ItemID.JOGRE_BONE, ItemID.BIG_BONES, ItemID.ZOGRE_BONE, ItemID.SHAIKAHAN_BONES, ItemID.BABYDRAGON_BONES,
+		ItemID.WYRM_BONES, ItemID.DRAGON_BONES, ItemID.DRAKE_BONES, ItemID.FAYRG_BONES, ItemID.LAVA_DRAGON_BONES,
+		ItemID.RAURG_BONES, ItemID.HYDRA_BONES, ItemID.DAGANNOTH_BONES, ItemID.OURG_BONES, ItemID.SUPERIOR_DRAGON_BONES,
+		ItemID.WYVERN_BONES
+	);
+	private static final Set<Integer> LOG_FLETCH = ImmutableSet.of(ItemID.LOGS, ItemID.ACHEY_TREE_LOGS, ItemID.OAK_LOGS, ItemID.WILLOW_LOGS,
+		ItemID.TEAK_LOGS, ItemID.MAPLE_LOGS, ItemID.YEW_LOGS, ItemID.MAGIC_LOGS, ItemID.REDWOOD_LOGS, ItemID.BRUMA_ROOT
 	);
 	private static final Set<Integer> POTION_VIAL = ImmutableSet.of(ItemID.VIAL_OF_WATER, ItemID.COCONUT_MILK, ItemID.VIAL_OF_BLOOD
 	);
@@ -89,8 +119,9 @@ public class OneClickPlugin extends Plugin
 		ItemID.ANTIFIRE_POTION4, ItemID.SUPER_ANTIFIRE_POTION4, ItemID.RANGING_POTION4, ItemID.MAGIC_POTION4,
 		ItemID.SUPER_COMBAT_POTION4, ItemID.SUPER_ENERGY4, ItemID.ANTIDOTE4_5952, ItemID.ANTIVENOM4
 	);
-	private static final Set<String> BIRD_HOUSES_NAMES = ImmutableSet.of("<col=ffff>Bird house (empty)", "<col=ffff>Oak birdhouse (empty)",
-		"<col=ffff>Willow birdhouse (empty)", "<col=ffff>Teak birdhouse (empty)", "<col=ffff>Maple birdhouse (empty)", "<col=ffff>Mahogany birdhouse (empty)",
+	private static final Set<String> BIRD_HOUSES_NAMES = ImmutableSet.of(
+		"<col=ffff>Bird house (empty)", "<col=ffff>Oak birdhouse (empty)", "<col=ffff>Willow birdhouse (empty)",
+		"<col=ffff>Teak birdhouse (empty)", "<col=ffff>Maple birdhouse (empty)", "<col=ffff>Mahogany birdhouse (empty)",
 		"<col=ffff>Yew birdhouse (empty)", "<col=ffff>Magic birdhouse (empty)", "<col=ffff>Redwood birdhouse (empty)"
 	);
 	private static final String MAGIC_IMBUE_EXPIRED_MESSAGE = "Your Magic Imbue charge has ended.";
@@ -103,15 +134,16 @@ public class OneClickPlugin extends Plugin
 	@Inject
 	private EventBus eventBus;
 
-	private boolean tick = false;
 	private final Map<Integer, String> targetMap = new HashMap<>();
+
 	private AlchItem alchItem;
 	private GameObject cannon;
-	private boolean cannonFiring = false;
-	private int prevCannonAnimation = 514;
 	private Types type = Types.NONE;
-	private boolean imbue;
+	private boolean cannonFiring;
 	private boolean enableImbue;
+	private boolean imbue;
+	private boolean tick;
+	private int prevCannonAnimation = 514;
 
 	@Provides
 	OneClickConfig provideConfig(ConfigManager configManager)
@@ -135,17 +167,16 @@ public class OneClickPlugin extends Plugin
 
 	private void addSubscriptions()
 	{
-		eventBus.subscribe(MenuEntryAdded.class, this, this::onMenuEntryAdded);
-		eventBus.subscribe(MenuOptionClicked.class, this, this::onMenuOptionClicked);
-		eventBus.subscribe(GameTick.class, this, this::onGameTick);
-		eventBus.subscribe(ConfigChanged.class, this, this::onConfigChanged);
-		eventBus.subscribe(MenuOpened.class, this, this::onMenuOpened);
-		eventBus.subscribe(GameObjectSpawned.class, this, this::onGameObjectSpawned);
 		eventBus.subscribe(ChatMessage.class, this, this::onChatMessage);
+		eventBus.subscribe(ConfigChanged.class, this, this::onConfigChanged);
+		eventBus.subscribe(GameObjectSpawned.class, this, this::onGameObjectSpawned);
 		eventBus.subscribe(GameStateChanged.class, this, this::onGameStateChanged);
+		eventBus.subscribe(GameTick.class, this, this::onGameTick);
+		eventBus.subscribe(MenuEntryAdded.class, this, this::onMenuEntryAdded);
+		eventBus.subscribe(MenuOpened.class, this, this::onMenuOpened);
+		eventBus.subscribe(MenuOptionClicked.class, this, this::onMenuOptionClicked);
 	}
 
-	//this prob isn't needed, but just incase.
 	private void onGameStateChanged(GameStateChanged event)
 	{
 		if (event.getGameState() == GameState.LOGGED_IN && imbue)
@@ -184,7 +215,7 @@ public class OneClickPlugin extends Plugin
 	{
 		final GameObject gameObject = event.getGameObject();
 		final Player localPlayer = client.getLocalPlayer();
-		if (gameObject.getId() == DWARF_MULTICANNON && cannon == null &&
+		if (gameObject.getId() == DWARF_MULTICANNON && cannon == null && localPlayer != null &&
 			localPlayer.getWorldLocation().distanceTo(gameObject.getWorldLocation()) <= 2 &&
 			localPlayer.getAnimation() == AnimationID.BURYING_BONES)
 		{
@@ -264,15 +295,15 @@ public class OneClickPlugin extends Plugin
 				}
 			}
 
-			final MenuEntry SetHighAlchItem = new MenuEntry();
+			final MenuEntry setHighAlchItem = new MenuEntry();
 			final boolean set = alchItem != null && alchItem.getId() == firstEntry.getIdentifier();
-			SetHighAlchItem.setOption(set ? "Unset" : "Set");
-			SetHighAlchItem.setTarget("<col=00ff00>High Alchemy Item <col=ffffff> -> " + firstEntry.getTarget());
-			SetHighAlchItem.setIdentifier(set ? -1 : firstEntry.getIdentifier());
-			SetHighAlchItem.setOpcode(MenuOpcode.RUNELITE.getId());
-			SetHighAlchItem.setParam1(widgetId);
-			SetHighAlchItem.setForceLeftClick(false);
-			menuList[1] = SetHighAlchItem;
+			setHighAlchItem.setOption(set ? "Unset" : "Set");
+			setHighAlchItem.setTarget("<col=00ff00>High Alchemy Item <col=ffffff> -> " + firstEntry.getTarget());
+			setHighAlchItem.setIdentifier(set ? -1 : firstEntry.getIdentifier());
+			setHighAlchItem.setOpcode(MenuOpcode.RUNELITE.getId());
+			setHighAlchItem.setParam1(widgetId);
+			setHighAlchItem.setForceLeftClick(false);
+			menuList[1] = setHighAlchItem;
 			event.setMenuEntries(menuList);
 			event.setModified();
 		}
@@ -281,428 +312,604 @@ public class OneClickPlugin extends Plugin
 
 	private void onMenuEntryAdded(MenuEntryAdded event)
 	{
-		final MenuEntry entry = event;
 		final int id = event.getIdentifier();
 		final int opcode = event.getOpcode();
-		targetMap.put(id, entry.getTarget());
+		targetMap.put(id, event.getTarget());
 
 		if (opcode == MenuOpcode.ITEM_USE.getId() && ItemID.SALTPETRE == id)
 		{
-			if (findItem(ItemID.COMPOST) == -1)
+			if (findItem(ItemID.COMPOST).getLeft() == -1)
 			{
 				return;
 			}
-			entry.setTarget("<col=ff9040>Compost<col=ffffff> -> " + targetMap.get(id));
+			event.setOption("Make fertilizer");
+			event.setTarget("<col=ff9040>Compost<col=ffffff> -> " + targetMap.get(id));
 			event.setModified();
 		}
 		else if (opcode == MenuOpcode.ITEM_USE.getId() && ItemID.POT == id)
 		{
-			if (findItem(ItemID.VOLCANIC_SULPHUR) == -1 || findItem(ItemID.SALTPETRE) == -1 || findItem(ItemID.JUNIPER_CHARCOAL) == -1)
+			if (findItem(ItemID.VOLCANIC_SULPHUR).getLeft() == -1 || findItem(ItemID.SALTPETRE).getLeft() == -1 || findItem(ItemID.JUNIPER_CHARCOAL).getLeft() == -1)
 			{
 				return;
 			}
-			entry.setTarget("<col=ff9040>Volcanic sulphur<col=ffffff> -> " + targetMap.get(id));
+			event.setOption("Mix dynamite");
+			event.setTarget("<col=ff9040>Volcanic sulphur<col=ffffff> -> " + targetMap.get(id));
 			event.setModified();
 		}
 		else if (opcode == MenuOpcode.ITEM_USE.getId() && ItemID.DYNAMITE_POT == id)
 		{
-			if (findItem(ItemID.BALL_OF_WOOL) == -1)
+			if (findItem(ItemID.BALL_OF_WOOL).getLeft() == -1)
 			{
 				return;
 			}
-			entry.setTarget("<col=ff9040>Ball of wool<col=ffffff> -> " + targetMap.get(id));
+			event.setOption("Add fuse");
+			event.setTarget(targetMap.get(id));
 			event.setModified();
 		}
 		else if (opcode == MenuOpcode.NPC_FIRST_OPTION.getId() &&
 			event.getOption().toLowerCase().contains("talk") && event.getTarget().toLowerCase().contains("wounded soldier"))
 		{
-			if (findItem(ItemID.SHAYZIEN_MEDPACK) == -1)
+			if (findItem(ItemID.SHAYZIEN_MEDPACK).getLeft() == -1)
 			{
 				return;
 			}
-			entry.setOption("Use");
-			entry.setTarget("<col=ff9040>Shayzien medpack<col=ffffff> -> " + event.getTarget());
+			event.setOption("Heal");
+			event.setTarget(event.getTarget());
 			event.setModified();
 		}
-		else if (type == Types.DARTS && opcode == MenuOpcode.ITEM_USE.getId() && DART_TIPS.contains(id))
+		else if (opcode == MenuOpcode.ITEM_USE.getId() && (DART_TIPS.contains(id) || BOLTS.contains(id)))
 		{
-			if (findItem(ItemID.FEATHER) == -1)
+			if (findItem(ItemID.FEATHER).getLeft() == -1)
 			{
 				return;
 			}
-			entry.setTarget("<col=ff9040>Feather<col=ffffff> -> " + targetMap.get(id));
+			event.setOption("Add feather");
+			event.setTarget(targetMap.get(id));
 			event.setModified();
 		}
-		else if (type == Types.FIREMAKING && opcode == MenuOpcode.ITEM_USE.getId() && LOG_ID.contains(id))
+		else if (opcode == MenuOpcode.ITEM_USE.getId() && LOG_ID.contains(id))
 		{
-			if (findItem(ItemID.TINDERBOX) == -1)
+			if (findItem(ItemID.TINDERBOX).getLeft() == -1)
 			{
 				return;
 			}
-			entry.setTarget("<col=ff9040>Tinderbox<col=ffffff> -> " + targetMap.get(id));
+			event.setOption("Light");
+			event.setTarget(targetMap.get(id));
 			event.setModified();
 		}
-		else if (type == Types.DARK_ESSENCE && opcode == MenuOpcode.ITEM_USE.getId() && id == ItemID.CHISEL)
+		else if (opcode == MenuOpcode.ITEM_USE.getId() && id == ItemID.CHISEL)
 		{
-			if (findItem(ItemID.DARK_ESSENCE_BLOCK) == -1)
+			if (findItem(ItemID.DARK_ESSENCE_BLOCK).getLeft() == -1)
 			{
 				return;
 			}
-			entry.setTarget("<col=ff9040>Chisel<col=ffffff> -> <col=ff9040>Dark essence block");
+			event.setOption("Chisel");
+			event.setTarget(targetMap.get(id));
 			event.setModified();
 		}
-		else if (type == Types.BIRDHOUSES && opcode == MenuOpcode.GAME_OBJECT_SECOND_OPTION.getId() &&
-			BIRD_HOUSES_NAMES.contains(event.getTarget()))
+		else if (opcode == MenuOpcode.ITEM_USE.getId() && id == ItemID.ARROW_SHAFT)
 		{
-			if (findItem(HOPS_SEED) == null)
+			if (findItem(ItemID.FEATHER).getLeft() == -1)
 			{
 				return;
 			}
-			entry.setOption("Use");
-			entry.setTarget("<col=ff9040>Hops seed<col=ffffff> -> " + targetMap.get(id));
-			entry.setOpcode(MenuOpcode.ITEM_USE_ON_GAME_OBJECT.getId());
+			event.setOption("Attach feather");
+			event.setTarget(targetMap.get(id));
 			event.setModified();
 		}
-		else if (type == Types.HERB_TAR && opcode == MenuOpcode.ITEM_USE.getId() && HERBS.contains(id))
+		else if (opcode == MenuOpcode.ITEM_USE.getId() && id == ItemID.HEADLESS_ARROW)
 		{
-			if (findItem(ItemID.SWAMP_TAR) == -1 || findItem(ItemID.PESTLE_AND_MORTAR) == -1)
+			if (findItem(ARROW_TIPS).getLeft() == -1)
 			{
 				return;
 			}
-			entry.setTarget("<col=ff9040>Swamp tar<col=ffffff> -> " + targetMap.get(id));
+			event.setOption("Finish");
+			event.setTarget(targetMap.get(id));
 			event.setModified();
 		}
-		else if (type == Types.LAVA_RUNES && opcode == MenuOpcode.GAME_OBJECT_FIRST_OPTION.getId() &&
-			event.getOption().equals("Craft-rune") && event.getTarget().equals("<col=ffff>Altar"))
+		else if (opcode == MenuOpcode.EXAMINE_OBJECT.getId() && event.getTarget().contains("Sink"))
 		{
-			if (findItem(ItemID.EARTH_RUNE) == -1)
+			if (findItem(ItemID.BOWL).getLeft() == -1)
 			{
 				return;
 			}
+			event.setOption("Fill bowl");
+			event.setTarget(targetMap.get(id));
+			event.setModified();
+		}
+		else if (opcode == MenuOpcode.ITEM_USE.getId() && id == ItemID.BOWL_OF_WATER)
+		{
+			if (findItem(ItemID.SERVERY_FLOUR).getLeft() == -1)
+			{
+				return;
+			}
+			event.setOption("Make dough");
+			event.setTarget(targetMap.get(id));
+			event.setModified();
+		}
+		else if (opcode == MenuOpcode.ITEM_USE.getId() && id == ItemID.SERVERY_PIZZA_BASE)
+		{
+			if (findItem(ItemID.SERVERY_TOMATO).getLeft() == -1)
+			{
+				return;
+			}
+			event.setOption("Add sauce");
+			event.setTarget(targetMap.get(id));
+			event.setModified();
+		}
+		else if (opcode == MenuOpcode.ITEM_USE.getId() && id == ItemID.SERVERY_INCOMPLETE_PIZZA)
+		{
+			if (findItem(ItemID.SERVERY_CHEESE).getLeft() == -1)
+			{
+				return;
+			}
+			event.setOption("Add cheese");
+			event.setTarget(targetMap.get(id));
+			event.setModified();
+		}
+		else if (opcode == MenuOpcode.ITEM_USE.getId() && id == ItemID.SERVERY_PINEAPPLE)
+		{
+			if (findItem(ItemID.KNIFE).getLeft() == -1)
+			{
+				return;
+			}
+			event.setOption("Slice");
+			event.setTarget(targetMap.get(id));
+			event.setModified();
+		}
+		else if (opcode == MenuOpcode.ITEM_USE.getId() && id == ItemID.SERVERY_PLAIN_PIZZA)
+		{
+			if (findItem(ItemID.SERVERY_PINEAPPLE_CHUNKS).getLeft() == -1)
+			{
+				return;
+			}
+			event.setOption("Add pineapple");
+			event.setTarget(targetMap.get(id));
+			event.setModified();
+		}
+		else if (opcode == MenuOpcode.EXAMINE_OBJECT.getId() && event.getTarget().equals("Tithe patch"))
+		{
+			if (findItem(TITHE_SEEDS).getLeft() == -1)
+			{
+				return;
+			}
+			event.setOption("Plant seed");
+			event.setTarget(targetMap.get(id));
+			event.setModified();
+		}
+		else if (opcode == MenuOpcode.ITEM_USE.getId() && LOG_FLETCH.contains(id))
+		{
+			if (findItem(ItemID.KNIFE).getLeft() == -1)
+			{
+				return;
+			}
+			event.setOption("Fletch");
+			event.setTarget(targetMap.get(id));
+			event.setModified();
+		}
+		else if (opcode == MenuOpcode.ITEM_USE.getId() && POTION_HERBS.contains(id))
+		{
+			if (findItem(POTION_VIAL).getLeft() == -1)
+			{
+				return;
+			}
+			event.setOption("Add herb");
+			event.setTarget(targetMap.get(id));
+			event.setModified();
+		}
+		else if (opcode == MenuOpcode.ITEM_USE.getId() && POTION_UNF_NAMES.contains(id))
+		{
+			if (findItem(POTION_INGREDIENT).getLeft() == -1)
+			{
+				return;
+			}
+			event.setOption("Make potion");
+			event.setTarget(targetMap.get(id));
+			event.setModified();
+		}
+		else if (opcode == MenuOpcode.ITEM_USE.getId() && POTION_INGREDIENT.contains(id))
+		{
+			if (findItem(UPGRADABLE_POTIONS).getLeft() == -1)
+			{
+				return;
+			}
+			event.setOption("Upgrade potion");
+			event.setTarget(targetMap.get(id));
+			event.setModified();
+		}
 
-			if (!imbue && enableImbue)
-			{
-				entry.setOption("Use");
-				entry.setTarget("<col=ff9040>Magic Imbue<col=ffffff> -> <col=ffff>Yourself");
-				event.setModified();
-				return;
-			}
-			entry.setOption("Use");
-			entry.setTarget("<col=ff9040>Earth rune<col=ffffff> -> <col=ffff>Altar");
-			event.setModified();
-		}
-		else if (type == Types.HIGH_ALCH && opcode == MenuOpcode.WIDGET_TYPE_2.getId() && alchItem != null &&
-			event.getOption().equals("Use") && event.getTarget().contains(alchItem.getName()))
+		switch (type)
 		{
-			entry.setOption("Cast");
-			entry.setTarget("<col=00ff00>High Level Alchemy</col><col=ffffff> -> " + alchItem.getName());
-			event.setModified();
-		}
-		else if (type == Types.DWARF_CANNON && cannonFiring && event.getIdentifier() == DWARF_MULTICANNON &&
-			opcode == MenuOpcode.GAME_OBJECT_FIRST_OPTION.getId())
-		{
-			if (findItem(ItemID.CANNONBALL) == -1)
-			{
-				return;
-			}
-			entry.setOption("Use");
-			entry.setTarget("<col=ff9040>Cannonball<col=ffffff> -> <col=ffff>Dwarf multicannon");
-			event.setModified();
-		}
-		else if (type == Types.BONES && opcode == MenuOpcode.GAME_OBJECT_FIRST_OPTION.getId() &&
-			event.getOption().toLowerCase().contains("pray") && event.getTarget().toLowerCase().contains("altar"))
-		{
-			if (findItem(BONE_SET) == null)
-			{
-				return;
-			}
-			entry.setOption("Use");
-			entry.setTarget("<col=ff9040>Bones<col=ffffff> -> " + event.getTarget());
-			event.setModified();
-		}
-		else if (type == Types.KARAMBWANS && opcode == MenuOpcode.GAME_OBJECT_FIRST_OPTION.getId() && event.getOption().equals("Cook"))
-		{
-			if (findItem(ItemID.RAW_KARAMBWAN) == -1)
-			{
-				return;
-			}
-			entry.setOption("Use");
-			entry.setTarget("<col=ff9040>Raw karambwan<col=ffffff> -> " + entry.getTarget());
-			event.setModified();
-		}
-		else if (type == Types.MIX_UNF_POTION && opcode == MenuOpcode.ITEM_USE.getId() && POTION_HERBS.contains(id))
-		{
-			if (findItem(POTION_VIAL) == null)
-			{
-				return;
-			}
-			entry.setTarget("<col=ff9040>Vial of liquid<col=ffffff> -> " + targetMap.get(id));
-			event.setModified();
-		}
-		else if (type == Types.FINISHED_POTION && opcode == MenuOpcode.ITEM_USE.getId() && POTION_UNF_NAMES.contains(id))
-		{
-			if (findItem(POTION_INGREDIENT) == null)
-			{
-				return;
-			}
-			entry.setTarget("<col=ff9040>Potion Ingredient<col=ffffff> -> " + targetMap.get(id));
-			event.setModified();
-		}
-		else if (type == Types.POTION_UPGRADES && opcode == MenuOpcode.ITEM_USE.getId() && POTION_INGREDIENT.contains(id))
-		{
-			if (findItem(UPGRADABLE_POTIONS) == null)
-			{
-				return;
-			}
-			entry.setTarget("<col=ff9040>Upgrade Potion");
-			event.setModified();
+			case BIRDHOUSES:
+				if (opcode == MenuOpcode.GAME_OBJECT_SECOND_OPTION.getId() && BIRD_HOUSES_NAMES.contains(event.getTarget()))
+				{
+					if (findItem(HOPS_SEED).getLeft() == -1)
+					{
+						return;
+					}
+					event.setOption("Use");
+					event.setTarget("<col=ff9040>Hops seed<col=ffffff> -> " + targetMap.get(id));
+					event.setOpcode(MenuOpcode.ITEM_USE_ON_GAME_OBJECT.getId());
+					event.setModified();
+				}
+				break;
+			case HERB_TAR:
+				if (opcode == MenuOpcode.ITEM_USE.getId() && HERBS.contains(id))
+				{
+					if (findItem(ItemID.SWAMP_TAR).getLeft() == -1 || findItem(ItemID.PESTLE_AND_MORTAR).getLeft() == -1)
+					{
+						return;
+					}
+					event.setTarget("<col=ff9040>Swamp tar<col=ffffff> -> " + targetMap.get(id));
+					event.setModified();
+				}
+				break;
+			case LAVA_RUNES:
+				if (opcode == MenuOpcode.GAME_OBJECT_FIRST_OPTION.getId() && event.getOption().equals("Craft-rune") && event.getTarget().equals("<col=ffff>Altar"))
+				{
+					if (findItem(ItemID.EARTH_RUNE).getLeft() == -1)
+					{
+						return;
+					}
+
+					if (!imbue && enableImbue)
+					{
+						event.setOption("Use");
+						event.setTarget("<col=ff9040>Magic Imbue<col=ffffff> -> <col=ffff>Yourself");
+						event.setModified();
+						return;
+					}
+					event.setOption("Use");
+					event.setTarget("<col=ff9040>Earth rune<col=ffffff> -> <col=ffff>Altar");
+					event.setModified();
+				}
+				break;
+			case HIGH_ALCH:
+				if (opcode == MenuOpcode.WIDGET_TYPE_2.getId() && alchItem != null && event.getOption().equals("Cast") && event.getTarget().equals("<col=00ff00>High Level Alchemy</col>"))
+				{
+					event.setOption("Cast");
+					event.setTarget("<col=00ff00>High Level Alchemy</col><col=ffffff> -> " + alchItem.getName());
+					event.setModified();
+				}
+				break;
+			case DWARF_CANNON:
+				if (cannonFiring && event.getIdentifier() == DWARF_MULTICANNON && opcode == MenuOpcode.GAME_OBJECT_FIRST_OPTION.getId())
+				{
+					if (findItem(ItemID.CANNONBALL).getLeft() == -1)
+					{
+						return;
+					}
+					event.setOption("Use");
+					event.setTarget("<col=ff9040>Cannonball<col=ffffff> -> <col=ffff>Dwarf multicannon");
+					event.setModified();
+				}
+				break;
+			case BONES:
+				if (opcode == MenuOpcode.GAME_OBJECT_FIRST_OPTION.getId() && event.getOption().toLowerCase().contains("pray") && event.getTarget().toLowerCase().contains("altar"))
+				{
+					if (findItem(BONE_SET).getLeft() == -1)
+					{
+						return;
+					}
+					event.setOption("Use");
+					event.setTarget("<col=ff9040>Bones<col=ffffff> -> " + event.getTarget());
+					event.setModified();
+				}
+				break;
+			case KARAMBWANS:
+				if (opcode == MenuOpcode.GAME_OBJECT_FIRST_OPTION.getId() && event.getOption().equals("Cook"))
+				{
+					if (findItem(ItemID.RAW_KARAMBWAN).getLeft() == -1)
+					{
+						return;
+					}
+					event.setOption("Use");
+					event.setTarget("<col=ff9040>Raw karambwan<col=ffffff> -> " + event.getTarget());
+					event.setModified();
+				}
+				break;
 		}
 	}
 
 	private void onMenuOptionClicked(MenuOptionClicked event)
 	{
-		final MenuEntry entry = event;
 		final String target = event.getTarget();
 		final int opcode = event.getOpcode();
 
 		if (tick)
 		{
 			event.consume();
+			return;
 		}
-		else if (entry.getOpcode() == MenuOpcode.NPC_FIRST_OPTION.getId() &&
-			event.getTarget().toLowerCase().contains("wounded soldier"))
+
+		if (event.getTarget() == null)
 		{
-			entry.setOpcode(MenuOpcode.ITEM_USE_ON_NPC.getId());
-			client.setSelectedItemWidget(WidgetInfo.INVENTORY.getId());
-			client.setSelectedItemSlot(findItem(ItemID.SHAYZIEN_MEDPACK));
-			client.setSelectedItemID(ItemID.SHAYZIEN_MEDPACK);
+			return;
 		}
-		else if (opcode == MenuOpcode.ITEM_USE.getId() &&
-			target.contains("<col=ff9040>Compost<col=ffffff> -> "))
+
+		if (opcode == MenuOpcode.NPC_FIRST_OPTION.getId() && event.getOption().equals("Heal"))
 		{
-			entry.setOpcode(MenuOpcode.ITEM_USE_ON_WIDGET_ITEM.getId());
-			client.setSelectedItemWidget(WidgetInfo.INVENTORY.getId());
-			client.setSelectedItemSlot(findItem(ItemID.COMPOST));
-			client.setSelectedItemID(ItemID.COMPOST);
-		}
-		else if (opcode == MenuOpcode.ITEM_USE.getId() &&
-			target.contains("<col=ff9040>Volcanic sulphur<col=ffffff> -> "))
-		{
-			entry.setOpcode(MenuOpcode.ITEM_USE_ON_WIDGET_ITEM.getId());
-			client.setSelectedItemWidget(WidgetInfo.INVENTORY.getId());
-			client.setSelectedItemSlot(findItem(ItemID.VOLCANIC_SULPHUR));
-			client.setSelectedItemID(ItemID.VOLCANIC_SULPHUR);
-		}
-		else if (opcode == MenuOpcode.ITEM_USE.getId() &&
-			target.contains("<col=ff9040>Ball of wool<col=ffffff> -> "))
-		{
-			entry.setOpcode(MenuOpcode.ITEM_USE_ON_WIDGET_ITEM.getId());
-			client.setSelectedItemWidget(WidgetInfo.INVENTORY.getId());
-			client.setSelectedItemSlot(findItem(ItemID.BALL_OF_WOOL));
-			client.setSelectedItemID(ItemID.BALL_OF_WOOL);
-		}
-		else if (type == Types.DARTS && opcode == MenuOpcode.ITEM_USE.getId() &&
-			target.contains("<col=ff9040>Feather<col=ffffff> -> "))
-		{
-			entry.setOpcode(MenuOpcode.ITEM_USE_ON_WIDGET_ITEM.getId());
-			client.setSelectedItemWidget(WidgetInfo.INVENTORY.getId());
-			client.setSelectedItemSlot(findItem(ItemID.FEATHER));
-			client.setSelectedItemID(ItemID.FEATHER);
-		}
-		else if (type == Types.FIREMAKING && opcode == MenuOpcode.ITEM_USE.getId() &&
-			target.contains("<col=ff9040>Tinderbox<col=ffffff> -> "))
-		{
-			entry.setOpcode(MenuOpcode.ITEM_USE_ON_WIDGET_ITEM.getId());
-			client.setSelectedItemWidget(WidgetInfo.INVENTORY.getId());
-			client.setSelectedItemSlot(findItem(ItemID.TINDERBOX));
-			client.setSelectedItemID(ItemID.TINDERBOX);
-		}
-		else if (type == Types.DARK_ESSENCE && opcode == MenuOpcode.ITEM_USE.getId() &&
-			target.contains("<col=ff9040>Chisel<col=ffffff> ->"))
-		{
-			if (findItem(ItemID.DARK_ESSENCE_BLOCK) != -1)
+			if (updateSelectedItem(ItemID.SHAYZIEN_MEDPACK))
 			{
-				entry.setOpcode(MenuOpcode.ITEM_USE_ON_WIDGET_ITEM.getId());
-				client.setSelectedItemWidget(WidgetInfo.INVENTORY.getId());
-				client.setSelectedItemSlot(findItem(ItemID.DARK_ESSENCE_BLOCK));
-				client.setSelectedItemID(ItemID.DARK_ESSENCE_BLOCK);
+				event.setOpcode(MenuOpcode.ITEM_USE_ON_NPC.getId());
 			}
 		}
-		else if (type == Types.BIRDHOUSES && opcode == MenuOpcode.ITEM_USE_ON_GAME_OBJECT.getId() &&
-			target.contains("<col=ff9040>Hops seed<col=ffffff> -> "))
+		else if (opcode == MenuOpcode.ITEM_USE.getId() && event.getOption().equals("Make fertilizer"))
 		{
-			final int[] seedLoc = findItem(HOPS_SEED);
-			if (seedLoc == null || seedLoc.length < 2)
+			if (updateSelectedItem(ItemID.COMPOST))
 			{
-				return;
+				event.setOpcode(MenuOpcode.ITEM_USE_ON_WIDGET_ITEM.getId());
 			}
-			client.setSelectedItemWidget(WidgetInfo.INVENTORY.getId());
-			client.setSelectedItemSlot(seedLoc[0]);
-			client.setSelectedItemID(seedLoc[1]);
 		}
-		else if (type == Types.HERB_TAR && opcode == MenuOpcode.ITEM_USE.getId() &&
-			target.contains("<col=ff9040>Swamp tar<col=ffffff> -> "))
+		else if (opcode == MenuOpcode.ITEM_USE.getId() && event.getOption().equals("Mix dynamite"))
 		{
-			entry.setOpcode(MenuOpcode.ITEM_USE_ON_WIDGET_ITEM.getId());
-			client.setSelectedItemWidget(WidgetInfo.INVENTORY.getId());
-			client.setSelectedItemSlot(findItem(ItemID.SWAMP_TAR));
-			client.setSelectedItemID(ItemID.SWAMP_TAR);
-		}
-		else if (type == Types.LAVA_RUNES && opcode == MenuOpcode.GAME_OBJECT_FIRST_OPTION.getId() &&
-			target.equals("<col=ff9040>Earth rune<col=ffffff> -> <col=ffff>Altar"))
-		{
-			entry.setOpcode(MenuOpcode.ITEM_USE_ON_GAME_OBJECT.getId());
-			client.setSelectedItemWidget(WidgetInfo.INVENTORY.getId());
-			client.setSelectedItemSlot(findItem(ItemID.EARTH_RUNE));
-			client.setSelectedItemID(ItemID.EARTH_RUNE);
-		}
-		else if (type == Types.LAVA_RUNES && opcode == MenuOpcode.GAME_OBJECT_FIRST_OPTION.getId() &&
-			target.equals("<col=ff9040>Magic Imbue<col=ffffff> -> <col=ffff>Yourself"))
-		{
-			entry.setIdentifier(1);
-			entry.setOpcode(MenuOpcode.WIDGET_DEFAULT.getId());
-			entry.setParam0(-1);
-			entry.setParam1(WidgetInfo.SPELL_MAGIC_IMBUE.getId());
-		}
-		else if (type == Types.HIGH_ALCH && opcode == MenuOpcode.WIDGET_TYPE_2.getId() && event.getOption().equals("Cast") &&
-			target.contains("High Level Alchemy"))
-		{
-			entry.setIdentifier(alchItem.getId());
-			entry.setOpcode(MenuOpcode.ITEM_USE_ON_WIDGET.getId());
-			entry.setParam0(findItem(alchItem.getId()));
-			entry.setParam1(9764864);
-			client.setSelectedSpellName("<col=00ff00>High Level Alchemy</col><col=ffffff>");
-			client.setSelectedSpellWidget(WidgetInfo.SPELL_HIGH_LEVEL_ALCHEMY.getId());
-		}
-		else if (type == Types.HIGH_ALCH && entry.getOpcode() == MenuOpcode.RUNELITE.getId() && entry.getIdentifier() == -1)
-		{
-			alchItem = null;
-		}
-		else if (type == Types.HIGH_ALCH && entry.getOpcode() == MenuOpcode.RUNELITE.getId() && entry.getOption().equals("Set"))
-		{
-			final String itemName = entry.getOption().split(" -> ")[1];
-			alchItem = new AlchItem(itemName, entry.getIdentifier());
-		}
-		else if (type == Types.DWARF_CANNON && cannonFiring && entry.getIdentifier() == DWARF_MULTICANNON &&
-			entry.getOpcode() == MenuOpcode.GAME_OBJECT_FIRST_OPTION.getId())
-		{
-			entry.setOpcode(MenuOpcode.ITEM_USE_ON_GAME_OBJECT.getId());
-			client.setSelectedItemWidget(WidgetInfo.INVENTORY.getId());
-			client.setSelectedItemSlot(findItem(ItemID.CANNONBALL));
-			client.setSelectedItemID(ItemID.CANNONBALL);
-		}
-		else if (type == Types.BONES && entry.getOpcode() == MenuOpcode.GAME_OBJECT_FIRST_OPTION.getId() &&
-			entry.getOption().contains("<col=ff9040>Bones<col=ffffff> -> ") && target.toLowerCase().contains("altar"))
-		{
-			final int[] bonesLoc = findItem(BONE_SET);
-
-			if (bonesLoc == null || bonesLoc.length < 2)
+			if (updateSelectedItem(ItemID.VOLCANIC_SULPHUR))
 			{
-				System.out.println("Cant find bones.");
-				return;
+				event.setOpcode(MenuOpcode.ITEM_USE_ON_WIDGET_ITEM.getId());
 			}
-
-			entry.setOpcode(MenuOpcode.ITEM_USE_ON_GAME_OBJECT.getId());
-			client.setSelectedItemWidget(WidgetInfo.INVENTORY.getId());
-			client.setSelectedItemSlot(bonesLoc[0]);
-			client.setSelectedItemID(bonesLoc[1]);
 		}
-		else if (type == Types.KARAMBWANS && entry.getOpcode() == MenuOpcode.GAME_OBJECT_FIRST_OPTION.getId() &&
-			entry.getOption().contains("<col=ff9040>Raw karambwan<col=ffffff> -> "))
+		else if (opcode == MenuOpcode.ITEM_USE.getId() && event.getOption().equals("Add fuse"))
 		{
-			entry.setOpcode(MenuOpcode.ITEM_USE_ON_GAME_OBJECT.getId());
-			client.setSelectedItemWidget(WidgetInfo.INVENTORY.getId());
-			client.setSelectedItemSlot(findItem(ItemID.RAW_KARAMBWAN));
-			client.setSelectedItemID(ItemID.RAW_KARAMBWAN);
-			tick = true;
-		}
-		else if (type == Types.MIX_UNF_POTION && opcode == MenuOpcode.ITEM_USE.getId() &&
-			target.contains("<col=ff9040>Vial of liquid<col=ffffff> -> "))
-		{
-			final int[] potherbsLoc = findItem(POTION_VIAL);
-
-			if (potherbsLoc == null || potherbsLoc.length < 2)
+			if (updateSelectedItem(ItemID.BALL_OF_WOOL))
 			{
-				return;
+				event.setOpcode(MenuOpcode.ITEM_USE_ON_WIDGET_ITEM.getId());
 			}
-
-			entry.setOpcode(MenuOpcode.ITEM_USE_ON_WIDGET_ITEM.getId());
-			client.setSelectedItemWidget(WidgetInfo.INVENTORY.getId());
-			client.setSelectedItemSlot(potherbsLoc[0]);
-			client.setSelectedItemID(potherbsLoc[1]);
 		}
-		else if (type == Types.FINISHED_POTION && opcode == MenuOpcode.ITEM_USE.getId() &&
-			target.contains("<col=ff9040>Potion Ingredient<col=ffffff> -> "))
+		else if (opcode == MenuOpcode.ITEM_USE.getId() && event.getOption().equals("Light"))
 		{
-			final int[] finpotLoc = findItem(POTION_INGREDIENT);
-
-			if (finpotLoc == null || finpotLoc.length < 2)
+			if (updateSelectedItem(ItemID.TINDERBOX))
 			{
-				return;
+				event.setOpcode(MenuOpcode.ITEM_USE_ON_WIDGET_ITEM.getId());
 			}
-
-			entry.setOpcode(MenuOpcode.ITEM_USE_ON_WIDGET_ITEM.getId());
-			client.setSelectedItemWidget(WidgetInfo.INVENTORY.getId());
-			client.setSelectedItemSlot(finpotLoc[0]);
-			client.setSelectedItemID(finpotLoc[1]);
 		}
-		else if (type == Types.POTION_UPGRADES && opcode == MenuOpcode.ITEM_USE.getId() &&
-			target.contains("<col=ff9040>Upgrade Potion"))
+		else if (opcode == MenuOpcode.ITEM_USE.getId() && event.getOption().equals("Add feather"))
 		{
-			final int[] upgradepotLoc = findItem(UPGRADABLE_POTIONS);
-
-			if (upgradepotLoc == null || upgradepotLoc.length < 2)
+			if (updateSelectedItem(ItemID.FEATHER))
 			{
-				return;
+				event.setOpcode(MenuOpcode.ITEM_USE_ON_WIDGET_ITEM.getId());
 			}
+		}
+		else if (opcode == MenuOpcode.ITEM_USE.getId() && event.getOption().equals("Chisel"))
+		{
+			if (updateSelectedItem(ItemID.DARK_ESSENCE_BLOCK))
+			{
+				event.setOpcode(MenuOpcode.ITEM_USE_ON_WIDGET_ITEM.getId());
+			}
+		}
+		else if (opcode == MenuOpcode.ITEM_USE.getId() && event.getOption().equals("Attach feather"))
+		{
+			if (updateSelectedItem(ItemID.FEATHER))
+			{
+				event.setOpcode(MenuOpcode.ITEM_USE_ON_WIDGET_ITEM.getId());
+			}
+		}
+		else if (opcode == MenuOpcode.ITEM_USE.getId() && event.getOption().equals("Finish"))
+		{
+			if (updateSelectedItem(ARROW_TIPS))
+			{
+				event.setOpcode(MenuOpcode.ITEM_USE_ON_WIDGET_ITEM.getId());
+			}
+		}
+		else if (opcode == MenuOpcode.EXAMINE_OBJECT.getId() && event.getOption().equals("Fill bowl"))
+		{
+			if (updateSelectedItem(ItemID.BOWL))
+			{
+				event.setOpcode(MenuOpcode.ITEM_USE_ON_GAME_OBJECT.getId());
+			}
+		}
+		else if (opcode == MenuOpcode.ITEM_USE.getId() && event.getOption().equals("Make dough"))
+		{
+			if (updateSelectedItem(ItemID.SERVERY_FLOUR))
+			{
+				event.setOpcode(MenuOpcode.ITEM_USE_ON_WIDGET_ITEM.getId());
+			}
+		}
+		else if (opcode == MenuOpcode.ITEM_USE.getId() && event.getOption().equals("Add sauce"))
+		{
+			if (updateSelectedItem(ItemID.SERVERY_TOMATO))
+			{
+				event.setOpcode(MenuOpcode.ITEM_USE_ON_WIDGET_ITEM.getId());
+			}
+		}
+		else if (opcode == MenuOpcode.ITEM_USE.getId() && event.getOption().equals("Add cheese"))
+		{
+			if (updateSelectedItem(ItemID.SERVERY_CHEESE))
+			{
+				event.setOpcode(MenuOpcode.ITEM_USE_ON_WIDGET_ITEM.getId());
+			}
+		}
+		else if (opcode == MenuOpcode.ITEM_USE.getId() && event.getOption().equals("Slice"))
+		{
+			if (updateSelectedItem(ItemID.KNIFE))
+			{
+				event.setOpcode(MenuOpcode.ITEM_USE_ON_WIDGET_ITEM.getId());
+			}
+		}
 
-			entry.setOpcode(MenuOpcode.ITEM_USE_ON_WIDGET_ITEM.getId());
-			client.setSelectedItemWidget(WidgetInfo.INVENTORY.getId());
-			client.setSelectedItemSlot(upgradepotLoc[0]);
-			client.setSelectedItemID(upgradepotLoc[1]);
+		else if (opcode == MenuOpcode.EXAMINE_OBJECT.getId() && event.getOption().equals("Plant seed"))
+		{
+			if (updateSelectedItem(TITHE_SEEDS))
+			{
+				event.setOpcode(MenuOpcode.ITEM_USE_ON_GAME_OBJECT.getId());
+			}
+		}
+		else if (opcode == MenuOpcode.ITEM_USE.getId() && event.getOption().equals("Fletch"))
+		{
+			if (updateSelectedItem(ItemID.KNIFE))
+			{
+				event.setOpcode(MenuOpcode.ITEM_USE_ON_WIDGET_ITEM.getId());
+			}
+		}
+		else if (opcode == MenuOpcode.ITEM_USE.getId() && event.getOption().equals("Add herb"))
+		{
+			if (updateSelectedItem(POTION_VIAL))
+			{
+				event.setOpcode(MenuOpcode.ITEM_USE_ON_WIDGET_ITEM.getId());
+			}
+		}
+		else if (opcode == MenuOpcode.ITEM_USE.getId() && event.getOption().equals("Make potion"))
+		{
+			if (updateSelectedItem(POTION_INGREDIENT))
+			{
+				event.setOpcode(MenuOpcode.ITEM_USE_ON_WIDGET_ITEM.getId());
+			}
+		}
+		else if (opcode == MenuOpcode.ITEM_USE.getId() && event.getOption().equals("Upgrade potion"))
+		{
+			if (updateSelectedItem(UPGRADABLE_POTIONS))
+			{
+				event.setOpcode(MenuOpcode.ITEM_USE_ON_WIDGET_ITEM.getId());
+			}
+		}
+
+		switch (type)
+		{
+			case BIRDHOUSES:
+				if (opcode == MenuOpcode.ITEM_USE_ON_GAME_OBJECT.getId() && target.contains("<col=ff9040>Hops seed<col=ffffff> -> "))
+				{
+					updateSelectedItem(HOPS_SEED);
+				}
+				break;
+			case HERB_TAR:
+				if (opcode == MenuOpcode.ITEM_USE.getId() && target.contains("<col=ff9040>Swamp tar<col=ffffff> -> "))
+				{
+					if (updateSelectedItem(ItemID.SWAMP_TAR))
+					{
+						event.setOpcode(MenuOpcode.ITEM_USE_ON_WIDGET_ITEM.getId());
+					}
+				}
+				break;
+			case LAVA_RUNES:
+				if (opcode == MenuOpcode.GAME_OBJECT_FIRST_OPTION.getId() &&
+					target.equals("<col=ff9040>Earth rune<col=ffffff> -> <col=ffff>Altar"))
+				{
+					if (updateSelectedItem(ItemID.EARTH_RUNE))
+					{
+						event.setOpcode(MenuOpcode.ITEM_USE_ON_GAME_OBJECT.getId());
+					}
+				}
+				else if (opcode == MenuOpcode.GAME_OBJECT_FIRST_OPTION.getId() &&
+					target.equals("<col=ff9040>Magic Imbue<col=ffffff> -> <col=ffff>Yourself"))
+				{
+					event.setIdentifier(1);
+					event.setOpcode(MenuOpcode.WIDGET_DEFAULT.getId());
+					event.setParam0(-1);
+					event.setParam1(WidgetInfo.SPELL_MAGIC_IMBUE.getId());
+				}
+				break;
+			case HIGH_ALCH:
+				if (opcode == MenuOpcode.WIDGET_TYPE_2.getId() && event.getOption().equals("Cast") && target.contains("<col=00ff00>High Level Alchemy</col><col=ffffff> -> "))
+				{
+					final Pair<Integer, Integer> pair = findItem(alchItem.getId());
+					if (pair.getLeft() != -1)
+					{
+						event.setOpcode(MenuOpcode.ITEM_USE_ON_WIDGET.getId());
+						event.setIdentifier(pair.getLeft());
+						event.setParam0(pair.getRight());
+						event.setParam1(WidgetInfo.INVENTORY.getId());
+						client.setSelectedSpellName("<col=00ff00>High Level Alchemy</col><col=ffffff>");
+						client.setSelectedSpellWidget(WidgetInfo.SPELL_HIGH_LEVEL_ALCHEMY.getId());
+					}
+				}
+				else if (opcode == MenuOpcode.RUNELITE.getId() && event.getIdentifier() == -1)
+				{
+					alchItem = null;
+				}
+				else if (type == Types.HIGH_ALCH && opcode == MenuOpcode.RUNELITE.getId())
+				{
+					final String itemName = event.getTarget().split("<col=00ff00>High Alchemy Item <col=ffffff> -> ")[1];
+					alchItem = new AlchItem(itemName, event.getIdentifier());
+				}
+				break;
+			case DWARF_CANNON:
+				if (cannonFiring && event.getIdentifier() == DWARF_MULTICANNON && opcode == MenuOpcode.GAME_OBJECT_FIRST_OPTION.getId())
+				{
+					if (updateSelectedItem(ItemID.CANNON_BALL))
+					{
+						event.setOpcode(MenuOpcode.ITEM_USE_ON_GAME_OBJECT.getId());
+					}
+				}
+				break;
+			case BONES:
+				if (opcode == MenuOpcode.GAME_OBJECT_FIRST_OPTION.getId() &&
+					event.getTarget().contains("<col=ff9040>Bones<col=ffffff> -> ") && target.toLowerCase().contains("altar"))
+				{
+					if (updateSelectedItem(BONE_SET))
+					{
+						event.setOpcode(MenuOpcode.ITEM_USE_ON_GAME_OBJECT.getId());
+					}
+				}
+				break;
+			case KARAMBWANS:
+				if (opcode == MenuOpcode.GAME_OBJECT_FIRST_OPTION.getId() && event.getTarget().contains("<col=ff9040>Raw karambwan<col=ffffff> -> "))
+				{
+					if (updateSelectedItem(ItemID.RAW_KARAMBWAN))
+					{
+						event.setOpcode(MenuOpcode.ITEM_USE_ON_GAME_OBJECT.getId());
+						tick = true;
+					}
+				}
+				break;
 		}
 	}
 
-	private int findItem(int itemID)
+	private boolean updateSelectedItem(int id)
 	{
-		final ItemContainer itemContainer = client.getItemContainer(InventoryID.INVENTORY);
-
-		if (itemContainer == null)
+		final Pair<Integer, Integer> pair = findItem(id);
+		if (pair.getLeft() != -1)
 		{
-			return -1;
+			client.setSelectedItemWidget(WidgetInfo.INVENTORY.getId());
+			client.setSelectedItemSlot(pair.getRight());
+			client.setSelectedItemID(pair.getLeft());
+			return true;
 		}
-
-		final Item[] items = itemContainer.getItems();
-		for (int slot = items.length - 1; slot >= 0; slot--)
-		{
-			final Item item = items[slot];
-			if (item != null && itemID == item.getId())
-			{
-				return slot;
-			}
-		}
-		return -1;
+		return false;
 	}
 
-	private int[] findItem(Collection<Integer> itemIDs)
+	private boolean updateSelectedItem(Collection<Integer> ids)
 	{
-		final ItemContainer itemContainer = client.getItemContainer(InventoryID.INVENTORY);
-
-		if (itemContainer == null)
+		final Pair<Integer, Integer> pair = findItem(ids);
+		if (pair.getLeft() != -1)
 		{
-			return null;
+			client.setSelectedItemWidget(WidgetInfo.INVENTORY.getId());
+			client.setSelectedItemSlot(pair.getRight());
+			client.setSelectedItemID(pair.getLeft());
+			return true;
 		}
-
-		final Item[] items = itemContainer.getItems();
-		for (int slot = items.length - 1; slot >= 0; slot--)
-		{
-			final Item item = items[slot];
-			if (item != null && itemIDs.contains(item.getId()))
-			{
-				return new int[]{slot, item.getId()};
-			}
-		}
-		return null;
+		return false;
 	}
 
+	private Pair<Integer, Integer> findItem(int id)
+	{
+		final Widget inventoryWidget = client.getWidget(WidgetInfo.INVENTORY);
+		final List<WidgetItem> itemList = (List<WidgetItem>) inventoryWidget.getWidgetItems();
+
+		for (int i = itemList.size() - 1; i >= 0; i--)
+		{
+			final WidgetItem item = itemList.get(i);
+			if (item.getId() == id)
+			{
+				return Pair.of(item.getId(), item.getIndex());
+			}
+		}
+
+		return Pair.of(-1, -1);
+	}
+
+	private Pair<Integer, Integer> findItem(Collection<Integer> ids)
+	{
+		final Widget inventoryWidget = client.getWidget(WidgetInfo.INVENTORY);
+		final List<WidgetItem> itemList = (List<WidgetItem>) inventoryWidget.getWidgetItems();
+
+		for (int i = itemList.size() - 1; i >= 0; i--)
+		{
+			final WidgetItem item = itemList.get(i);
+			if (ids.contains(item.getId()))
+			{
+				return Pair.of(item.getId(), item.getIndex());
+			}
+		}
+
+		return Pair.of(-1, -1);
+	}
 }

@@ -120,7 +120,8 @@ public class ToBCheats extends Plugin
 		addSubscriptions();
 		reset();
 		Flexo.client = client;
-		executorService.submit(() -> {
+		executorService.submit(() ->
+		{
 			flexo = null;
 			try
 			{

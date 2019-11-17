@@ -88,7 +88,8 @@ public class PraySwap extends Plugin implements KeyListener
 		eventBus.subscribe(GameTick.class, this, this::onGameTick);
 		keyManager.registerKeyListener(this);
 		Flexo.client = client;
-		executorService.submit(() -> {
+		executorService.submit(() ->
+		{
 			flexo = null;
 			try
 			{
@@ -162,7 +163,8 @@ public class PraySwap extends Plugin implements KeyListener
 		{
 			if (config.lowLevel())
 			{
-				executorService.submit(() -> {
+				executorService.submit(() ->
+				{
 					clickPrayer(Prayer.STEEL_SKIN, false);
 					clickPrayer(Prayer.ULTIMATE_STRENGTH, false);
 					clickPrayer(Prayer.INCREDIBLE_REFLEXES, true);
@@ -179,21 +181,24 @@ public class PraySwap extends Plugin implements KeyListener
 		}
 		if (e.getKeyCode() == config.comboOne().getKeyCode())
 		{
-			executorService.submit(() -> {
+			executorService.submit(() ->
+			{
 				clickPrayer(config.comboOnePrayerOne().getPrayer(), false);
 				clickPrayer(config.comboOnePrayerTwo().getPrayer(), true);
 			});
 		}
 		if (e.getKeyCode() == config.comboTwo().getKeyCode())
 		{
-			executorService.submit(() -> {
+			executorService.submit(() ->
+			{
 				clickPrayer(config.comboTwoPrayerOne().getPrayer(), false);
 				clickPrayer(config.comboTwoPrayerTwo().getPrayer(), true);
 			});
 		}
 		if (e.getKeyCode() == config.comboThree().getKeyCode())
 		{
-			executorService.submit(() -> {
+			executorService.submit(() ->
+			{
 				clickPrayer(config.comboThreePrayerOne().getPrayer(), false);
 				clickPrayer(config.comboThreePrayerTwo().getPrayer(), true);
 			});

@@ -88,7 +88,8 @@ public class OlmSwapper extends Plugin
 	{
 		addSubscriptions();
 		Flexo.client = client;
-		executorService.submit(() -> {
+		executorService.submit(() ->
+		{
 			flexo = null;
 			try
 			{

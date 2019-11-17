@@ -1,3 +1,9 @@
+/*
+ * Copyright (c) 2019, ganom <https://github.com/Ganom>
+ * Copyright (c) 2019, TomC <https://github.com/tomcylke>
+ * All rights reserved.
+ * Licensed under GPL3, see LICENSE for the full scope.
+ */
 package net.runelite.client.plugins.oneclick;
 
 import lombok.AllArgsConstructor;
@@ -7,8 +13,6 @@ import lombok.Getter;
 @Getter
 public enum Types
 {
-	DARTS("Darts"),
-	FIREMAKING("Firemaking"),
 	BIRDHOUSES("Birdhouses"),
 	HERB_TAR("Herb Tar"),
 	LAVA_RUNES("Lava Runes"),
@@ -16,10 +20,6 @@ public enum Types
 	DWARF_CANNON("Dwarf Cannon"),
 	BONES("Bones"),
 	KARAMBWANS("Karambwans"),
-	DARK_ESSENCE("Dark Essence"),
-	MIX_UNF_POTION("Mix Unfinished Potions"),
-	FINISHED_POTION("Mix Finished Potions"),
-	POTION_UPGRADES("Mix Potion Upgrades"),
 	NONE("None");
 
 	private String name;
