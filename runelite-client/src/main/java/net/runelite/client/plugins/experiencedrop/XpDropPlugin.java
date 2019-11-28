@@ -46,6 +46,7 @@ import net.runelite.api.WorldType;
 import net.runelite.api.events.FakeXpDrop;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
+import net.runelite.api.events.ScriptCallbackEvent;
 import net.runelite.api.events.WidgetHiddenChanged;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetID;
@@ -58,6 +59,7 @@ import net.runelite.client.game.XpDropEvent;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 import net.runelite.client.ui.overlay.OverlayManager;
+import net.runelite.client.util.ColorUtil;
 
 @PluginDescriptor(
 	name = "XP Drop",
@@ -72,14 +74,19 @@ public class XpDropPlugin extends Plugin
 	private static final double TL_MULTIPLIER_RATIO = 5;
 	private static final int TWISTED_LEAGUE_WAY_OF_THE_WARRIOR = 3;
 	private static final int TWISTED_LEAGUE_XERICS_WISDOM = 3;
+
 	@Inject
 	private Client client;
+
 	@Inject
 	private XpDropConfig config;
+
 	@Inject
 	private NPCManager npcManager;
+
 	@Inject
 	private OverlayManager overlayManager;
+
 	@Inject
 	private XpDropOverlay overlay;
 
@@ -116,7 +123,7 @@ public class XpDropPlugin extends Plugin
 	}
 
 	@Override
-	protected void startUp() throws Exception
+	protected void startUp()
 	{
 		updateConfig();
 
@@ -129,7 +136,7 @@ public class XpDropPlugin extends Plugin
 	}
 
 	@Override
-	protected void shutDown() throws Exception
+	protected void shutDown()
 	{
 		overlayManager.remove(overlay);
 	}
@@ -352,10 +359,49 @@ public class XpDropPlugin extends Plugin
 		}
 	}
 
+	@Subscribe
+	private void onScriptCallbackEvent(ScriptCallbackEvent e)
+	{
+		if (this.showdamagedrops == XpDropConfig.DamageMode.NONE)
+		{
+			return;
+		}
+
+		final String eventName = e.getEventName();
+
+		if (eventName.equals("newXpDrop"))
+		{
+			damage = 0;
+		}
+		else if (eventName.equals("hpXpGained"))
+		{
+			final int[] intStack = client.getIntStack();
+			final int intStackSize = client.getIntStackSize();
+
+			final int exp = intStack[intStackSize - 1];
+			calculateDamageDealt(exp);
+		}
+		else if (eventName.equals("xpDropAddDamage")
+			&& damageMode == XpDropConfig.DamageMode.IN_XP_DROP
+			&& damage > 0)
+		{
+			final String[] stringStack = client.getStringStack();
+			final int stringStackSize = client.getStringStackSize();
+
+			String builder =
+				stringStack[stringStackSize - 1]
+					+ ColorUtil.colorTag(this.damageColor)
+					+ " ("
+					+ damage
+					+ ")";
+			stringStack[stringStackSize - 1] = builder;
+		}
+	}
+
 	private void calculateDamageDealt(int diff)
 	{
 		double damageDealt = diff / HITPOINT_RATIO;
-		
+
 		// DeadMan mode has an XP modifier of 10x, Twisted League mode has an XP modifier of 5x
 		if (client.getWorldType().contains(WorldType.DEADMAN))
 		{
@@ -364,7 +410,7 @@ public class XpDropPlugin extends Plugin
 		if (client.getWorldType().contains(WorldType.LEAGUE))
 		{
 			damageDealt = damageDealt / TL_MULTIPLIER_RATIO;
-			
+
 			if (client.getVar(Varbits.TWISTED_LEAGUE_RELIC_3) == TWISTED_LEAGUE_WAY_OF_THE_WARRIOR)
 			{
 				damageDealt = damageDealt / 2;
@@ -374,7 +420,7 @@ public class XpDropPlugin extends Plugin
 				damageDealt = damageDealt / 2;
 			}
 		}
-		
+
 		// Some NPCs have an XP modifier, account for it here.
 		Actor a = client.getLocalPlayer().getInteracting();
 		if (!(a instanceof NPC) && !(a instanceof Player))
